@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Images — Imgify</title>
+
+  <!-- SEO / OG Meta -->
+  <meta name="description" content="View and manage all images uploaded from this browser session on Imgify.">
+  <meta property="og:title" content="My Images — Imgify">
+  <meta property="og:description" content="All images uploaded from this browser session.">
+  <meta property="og:image" content="/assets/img/og-image.png">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://imgify.site/dashboard.html">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="My Images — Imgify">
+  <meta name="twitter:description" content="All images uploaded from this browser session.">
+  <meta name="twitter:image" content="/assets/img/og-image.png">
+
+  <!-- Favicon -->
+  <link rel="icon" href="/assets/icons/favicon.ico">
+  <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons (UMD — available as window.lucide) -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <!-- Theme: runs before render to prevent FOUC — NOT a module -->
+  <script type="module" src="./js/theme.js"></script>
+
+  <!-- CSS (all four shared stylesheets) -->
+  <link rel="stylesheet" href="./css/global.css">
+  <link rel="stylesheet" href="./css/layout.css">
+  <link rel="stylesheet" href="./css/components.css">
+  <link rel="stylesheet" href="./css/pages.css">
+</head>
+<body>
+
+  <!-- ────────────────────────────────
+       GLOBAL NAVBAR
+  ──────────────────────────────────── -->
+  <header class="navbar" id="navbar">
+    <div class="navbar-inner">
+
+      <!-- Logo -->
+      <a href="/index.html" class="navbar-logo" aria-label="Imgify — go to homepage">
+        <span class="logo-icon" aria-hidden="true">⬡</span>
+        <span class="logo-text">Imgify</span>
+      </a>
+
+      <!-- Desktop Nav -->
+      <nav class="navbar-nav" id="navbar-nav" aria-label="Main navigation">
+        <a href="/index.html" class="nav-link">Dashboard</a>
+        <a href="/dashboard.html" class="nav-link active" aria-current="page">My Images</a>
+      </nav>
+
+      <!-- Desktop Actions -->
+      <div class="navbar-actions">
+        <button
+          class="btn-icon"
+          id="theme-toggle"
+          aria-label="Toggle dark/light theme"
+          title="Toggle theme">
+          <i data-lucide="sun"  class="icon-sun"  aria-hidden="true"></i>
+          <i data-lucide="moon" class="icon-moon" aria-hidden="true"></i>
+        </button>
+        <a href="/admin/login.html" class="btn btn-secondary btn-sm">Sign In</a>
+      </div>
+
+      <!-- Hamburger (mobile) -->
+      <button
+        class="btn-hamburger"
+        id="hamburger"
+        aria-label="Open navigation menu"
+        aria-expanded="false"
+        aria-controls="mobile-nav">
+        <i data-lucide="menu" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <!-- Mobile Nav Drawer -->
+    <div class="mobile-nav" id="mobile-nav" aria-hidden="true" role="navigation" aria-label="Mobile navigation">
+      <a href="/index.html" class="nav-link">Dashboard</a>
+      <a href="/dashboard.html" class="nav-link active" aria-current="page">My Images</a>
+      <div class="mobile-nav-footer">
+        <button
+          class="btn-icon"
+          id="theme-toggle-mobile"
+          aria-label="Toggle dark/light theme">
+          <i data-lucide="sun"  class="icon-sun"  aria-hidden="true"></i>
+          <i data-lucide="moon" class="icon-moon" aria-hidden="true"></i>
+        </button>
+        <a href="/admin/login.html" class="btn btn-secondary btn-sm">Sign In</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ────────────────────────────────
+       MAIN CONTENT
+  ──────────────────────────────────── -->
+  <main class="page-main dashboard-page">
+
+    <!-- ── Page Header ── -->
+    <section class="dashboard-page-header">
+      <div class="dashboard-page-header-left">
+        <h1 class="dashboard-title">My Images</h1>
+        <p class="dashboard-subtitle">All images uploaded from this browser session</p>
+      </div>
+      <div class="dashboard-page-header-right">
+        <!-- View Toggle -->
+        <div class="view-toggle-group" role="group" aria-label="Switch image layout view">
+          <button
+            class="btn-view active"
+            id="btn-grid-view"
+            aria-label="Grid view"
+            aria-pressed="true"
+            title="Grid view">
+            <i data-lucide="grid-3x3" aria-hidden="true"></i>
+          </button>
+          <button
+            class="btn-view"
+            id="btn-list-view"
+            aria-label="List view"
+            aria-pressed="false"
+            title="List view">
+            <i data-lucide="list" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Toolbar Row ── -->
+    <div class="dashboard-toolbar" role="toolbar" aria-label="Image management toolbar">
+      <span class="images-result-count" id="result-count" aria-live="polite" aria-atomic="true">
+        Loading…
+      </span>
+      <div class="toolbar-btn-group">
+        <button
+          class="btn btn-secondary"
+          id="btn-bulk-download"
+          disabled
+          aria-label="Download all session images as a ZIP archive"
+          title="Download all as ZIP">
+          <i data-lucide="archive" aria-hidden="true"></i>
+          <span>Download All (ZIP)</span>
+        </button>
+        <button
+          class="btn btn-danger"
+          id="btn-delete-selected"
+          hidden
+          aria-label="Delete all currently selected images">
+          <i data-lucide="trash-2" aria-hidden="true"></i>
+          <span>Delete Selected</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Search Bar ── -->
+    <div class="search-bar-wrap" id="search-bar" role="search" aria-label="Search uploaded images">
+      <span class="search-bar-icon" aria-hidden="true">
+        <i data-lucide="search"></i>
+      </span>
+      <input
+        type="text"
+        class="search-bar-input"
+        id="search-input"
+        placeholder="Search by name or tag…"
+        aria-label="Search images by name or tag"
+        autocomplete="off"
+        spellcheck="false">
+      <!-- dashboard.js attaches oninput to this for client-side filter -->
+    </div>
+
+    <!-- ── Images Mount ── -->
+    <!--
+      dashboard.js takes full ownership of this container.
+      It renders image cards (grid or list), handles the empty state,
+      and removes the skeleton loader once data is fetched (or confirmed empty).
+    -->
+    <div
+      id="images-mount"
+      class="images-mount images-grid"
+      role="region"
+      aria-label="Your uploaded images"
+      aria-live="polite"
+      aria-busy="true">
+
+      <!-- Initial skeleton loading state (dashboard.js removes this on data ready) -->
+      <div class="skeleton-grid" id="skeleton-grid" aria-label="Loading images" aria-hidden="false">
+        <div class="skeleton-card" aria-hidden="true">
+          <div class="skeleton-thumb shimmer"></div>
+          <div class="skeleton-meta">
+            <div class="skeleton-line shimmer"></div>
+            <div class="skeleton-line skeleton-line--short shimmer"></div>
+          </div>
+        </div>
+        <div class="skeleton-card" aria-hidden="true">
+          <div class="skeleton-thumb shimmer"></div>
+          <div class="skeleton-meta">
+            <div class="skeleton-line shimmer"></div>
+            <div class="skeleton-line skeleton-line--short shimmer"></div>
+          </div>
+        </div>
+        <div class="skeleton-card" aria-hidden="true">
+          <div class="skeleton-thumb shimmer"></div>
+          <div class="skeleton-meta">
+            <div class="skeleton-line shimmer"></div>
+            <div class="skeleton-line skeleton-line--short shimmer"></div>
+          </div>
+        </div>
+        <div class="skeleton-card" aria-hidden="true">
+          <div class="skeleton-thumb shimmer"></div>
+          <div class="skeleton-meta">
+            <div class="skeleton-line shimmer"></div>
+            <div class="skeleton-line skeleton-line--short shimmer"></div>
+          </div>
+        </div>
+        <div class="skeleton-card" aria-hidden="true">
+          <div class="skeleton-thumb shimmer"></div>
+          <div class="skeleton-meta">
+            <div class="skeleton-line shimmer"></div>
+            <div class="skeleton-line skeleton-line--short shimmer"></div>
+          </div>
+        </div>
+        <div class="skeleton-card" aria-hidden="true">
+          <div class="skeleton-thumb shimmer"></div>
+          <div class="skeleton-meta">
+            <div class="skeleton-line shimmer"></div>
+            <div class="skeleton-line skeleton-line--short shimmer"></div>
+          </div>
+        </div>
+      </div>
+
+      <!--
+        EMPTY STATE — injected by dashboard.js when sessionId has 0 uploads:
+        <div class="empty-state">
+          <div class="empty-state-icon">
+            <i data-lucide="image-off"></i>
+          </div>
+          <h2 class="empty-state-title">No images yet</h2>
+          <p class="empty-state-body">Upload your first image to see it here.</p>
+          <a href="/index.html" class="btn btn-primary">Go Upload</a>
+        </div>
+
+        GRID CARD — injected by dashboard.js for each image:
+        <div class="img-card" data-id="{imageId}">
+          <label class="img-card-checkbox-wrap" aria-label="Select image">
+            <input type="checkbox" class="img-card-checkbox" data-id="{imageId}">
+          </label>
+          <a href="/image.html?id={imageId}" class="img-card-thumb-link">
+            <img src="{imgbbThumbUrl}" alt="{customName}" class="img-card-thumb" loading="lazy">
+          </a>
+          <div class="img-card-body">
+            <p class="img-card-name">{customName}</p>
+            <p class="img-card-meta">{uploadDate} · {fileSize}</p>
+          </div>
+          <div class="img-card-actions">
+            <button class="btn-icon" data-action="copy-url" data-id="{imageId}" aria-label="Copy image URL">
+              <i data-lucide="copy"></i>
+            </button>
+            <button class="btn-icon btn-icon--danger" data-action="delete" data-id="{imageId}" aria-label="Delete image">
+              <i data-lucide="trash-2"></i>
+            </button>
+          </div>
+        </div>
+
+        LIST ROW — injected by dashboard.js when list view is active:
+        <div class="img-list-row" data-id="{imageId}">
+          <label class="img-card-checkbox-wrap" aria-label="Select image">
+            <input type="checkbox" class="img-card-checkbox" data-id="{imageId}">
+          </label>
+          <img src="{imgbbThumbUrl}" alt="{customName}" class="img-list-thumb" loading="lazy">
+          <div class="img-list-info">
+            <span class="img-list-name">{customName}</span>
+            <span class="img-list-meta">{fileSize} · {uploadDate}</span>
+          </div>
+          <button class="btn btn-secondary btn-sm" data-action="copy-url" data-id="{imageId}" aria-label="Copy direct URL">
+            <i data-lucide="copy"></i> Copy URL
+          </button>
+          <button class="btn-icon btn-icon--danger" data-action="delete" data-id="{imageId}" aria-label="Delete image">
+            <i data-lucide="trash-2"></i>
+          </button>
+        </div>
+      -->
+    </div>
+
+    <!-- ── Load More Mount ── -->
+    <!--
+      dashboard.js injects a "Load More" button here when total uploads > 20.
+      Hidden by default; dashboard.js uses removeAttribute('hidden') when needed.
+    -->
+    <div
+      id="load-more-mount"
+      class="load-more-mount"
+      hidden
+      aria-live="polite">
+      <!--
+        LOAD MORE BUTTON — injected by dashboard.js:
+        <button class="btn btn-secondary" id="btn-load-more" aria-label="Load more images">
+          Load More
+        </button>
+      -->
+    </div>
+
+    <!-- ── Ad Content Slot ── -->
+    <!-- ads-manager.js fills this from Firestore config/siteSettings -->
+    <div id="ad-content" class="ad-slot" aria-hidden="true"></div>
+
+  </main>
+
+  <!-- ────────────────────────────────
+       GLOBAL FOOTER
+  ──────────────────────────────────── -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <span class="footer-copy">© 2024 Imgify</span>
+      <nav class="footer-links" aria-label="Footer links">
+        <a href="/dashboard.html" class="footer-link">Dashboard</a>
+        <a href="/admin/index.html" class="footer-link">Admin</a>
+        <!--
+          ads-manager.js / footer init shows this link only when
+          siteSettings.donationLinks.donationEnabled === true
+        -->
+        <a
+          href="/donate.html"
+          class="footer-link"
+          id="footer-donate-link"
+          hidden
+          aria-label="Support Imgify with a donation">
+          Support Us ☕
+        </a>
+      </nav>
+    </div>
+  </footer>
+
+  <!-- ────────────────────────────────
+       SCRIPTS
+  ──────────────────────────────────── -->
+  <script type="module">
+    import { initAds } from './js/ads-manager.js';
+    import { initDashboard } from './js/dashboard.js';
+    initAds();
+    lucide.createIcons();
+
+    // Retrieve or create session ID, then boot dashboard
+    let _sid = localStorage.getItem('imgify-session');
+    if (!_sid) {
+      _sid = Array.from(crypto.getRandomValues(new Uint8Array(12))).map(b => b.toString(36)).join('').slice(0, 16);
+      localStorage.setItem('imgify-session', _sid);
+    }
+    initDashboard(_sid);
+  </script>
+
+</body>
+</html>

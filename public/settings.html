@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex" />
+  <title>Settings · Imgify Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/global.css" />
+  <link rel="stylesheet" href="../css/layout.css" />
+  <link rel="stylesheet" href="../css/components.css" />
+  <link rel="stylesheet" href="../css/pages.css" />
+  <script type="module" src="../js/theme.js"></script>
+  <style>
+    /* ── SETTINGS PAGE ─────────────────────────────────── */
+    .settings-header {
+      margin-bottom: 28px;
+    }
+    .settings-header h1 {
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+    .settings-header p {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    /* ── TAB SWITCHER ──────────────────────────────────── */
+    .tab-nav {
+      display: flex;
+      gap: 2px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 32px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .tab-nav::-webkit-scrollbar { display: none; }
+    .tab-btn {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 10px 18px;
+      font-size: 13.5px;
+      font-weight: 500;
+      font-family: var(--font-body);
+      color: var(--text-muted);
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: color 0.15s, border-color 0.15s;
+      margin-bottom: -1px;
+    }
+    .tab-btn:hover { color: var(--text-primary); }
+    .tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .tab-btn svg { width: 15px; height: 15px; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── SETTINGS CARD ─────────────────────────────────── */
+    .settings-card {
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .settings-card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .settings-card-title svg { width: 16px; height: 16px; color: var(--accent); }
+
+    /* ── FORM FIELDS ───────────────────────────────────── */
+    .form-group {
+      margin-bottom: 18px;
+    }
+    .form-group:last-of-type { margin-bottom: 0; }
+    .form-label {
+      display: block;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+      letter-spacing: 0.02em;
+    }
+    .form-label span {
+      font-weight: 400;
+      color: var(--text-muted);
+      margin-left: 4px;
+    }
+    .form-input,
+    .form-textarea {
+      width: 100%;
+      padding: 9px 12px;
+      font-size: 13.5px;
+      font-family: var(--font-body);
+      color: var(--text-primary);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .form-input:focus,
+    .form-textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-light);
+    }
+    .form-textarea {
+      resize: vertical;
+      min-height: 110px;
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      line-height: 1.6;
+    }
+    .form-hint {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      margin-top: 5px;
+    }
+
+    /* ── TOGGLE SWITCH ─────────────────────────────────── */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    .toggle-row:last-of-type { margin-bottom: 0; }
+    .toggle-info { flex: 1; min-width: 0; }
+    .toggle-label {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .toggle-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .toggle-switch {
+      position: relative;
+      width: 42px;
+      height: 24px;
+      flex-shrink: 0;
+      margin-left: 16px;
+    }
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+      position: absolute;
+    }
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: var(--border-strong);
+      border-radius: 24px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .toggle-track::before {
+      content: '';
+      position: absolute;
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      top: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .toggle-switch input:checked + .toggle-track { background: var(--accent); }
+    .toggle-switch input:checked + .toggle-track::before { transform: translateX(18px); }
+
+    /* ── SAVE BUTTON ───────────────────────────────────── */
+    .save-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 24px;
+    }
+    .btn-save {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 22px;
+      font-size: 13.5px;
+      font-weight: 600;
+      font-family: var(--font-body);
+      color: #fff;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+    }
+    .btn-save:hover { background: var(--accent-dark); }
+    .btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-save svg { width: 15px; height: 15px; }
+
+    /* ── AFFILIATE LINKS TABLE ─────────────────────────── */
+    .aff-table-wrap { overflow-x: auto; }
+    .aff-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .aff-table th {
+      padding: 8px 12px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+    .aff-table td {
+      padding: 12px 12px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-primary);
+      vertical-align: middle;
+    }
+    .aff-table tr:last-child td { border-bottom: none; }
+    .aff-table tr:hover td { background: var(--bg-secondary); }
+    .aff-name { font-weight: 500; }
+    .aff-url {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: var(--text-muted);
+      max-width: 160px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .placement-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      background: var(--accent-light);
+      color: var(--accent);
+    }
+    .btn-delete-aff {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .btn-delete-aff:hover {
+      background: var(--danger-light);
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+    .btn-delete-aff svg { width: 14px; height: 14px; }
+    .aff-empty {
+      text-align: center;
+      padding: 32px 16px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    /* ── ADD AFFILIATE FORM ────────────────────────────── */
+    .add-link-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .add-link-bar h3 {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .btn-add-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      font-size: 12.5px;
+      font-weight: 600;
+      font-family: var(--font-body);
+      color: var(--accent);
+      background: var(--accent-light);
+      border: 1px solid transparent;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-add-link:hover { background: var(--accent); color: #fff; }
+    .btn-add-link svg { width: 14px; height: 14px; }
+
+    .add-link-form {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .add-link-form.visible { display: block; }
+    .add-link-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    @media (max-width: 600px) {
+      .add-link-grid { grid-template-columns: 1fr; }
+    }
+    .add-link-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+    .btn-cancel-link {
+      padding: 7px 14px;
+      font-size: 12.5px;
+      font-weight: 500;
+      font-family: var(--font-body);
+      color: var(--text-muted);
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .btn-cancel-link:hover { color: var(--text-primary); border-color: var(--border-strong); }
+    .btn-confirm-link {
+      padding: 7px 16px;
+      font-size: 12.5px;
+      font-weight: 600;
+      font-family: var(--font-body);
+      color: #fff;
+      background: var(--accent);
+      border: none;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-confirm-link:hover { background: var(--accent-dark); }
+
+    /* ── DONATION METHODS GRID ─────────────────────────── */
+    .donation-method {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .donation-method-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .donation-method-title svg { width: 15px; height: 15px; color: var(--accent); }
+
+    /* ── TOAST ─────────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 9999;
+      min-width: 260px;
+      max-width: 360px;
+      padding: 13px 18px;
+      border-radius: 10px;
+      font-size: 13.5px;
+      font-weight: 500;
+      font-family: var(--font-body);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transform: translateY(20px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s, transform 0.25s;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    .toast.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .toast.success { background: var(--success-light); color: var(--success); }
+    .toast.error { background: var(--danger-light); color: var(--danger); }
+    .toast svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+    /* ── SECTION DIVIDER ───────────────────────────────── */
+    .section-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 24px 0;
+    }
+  </style>
+</head>
+<body>
+
+<div class="admin-layout">
+
+  <!-- ── SIDEBAR ─────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <a href="/index.html" class="logo-link">
+        <span class="logo-text">Imgify</span>
+      </a>
+      <span class="logo-badge">Admin</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <span class="nav-section-label">Main</span>
+      <a href="index.html" class="nav-item" data-icon="layout-dashboard">
+        <i data-lucide="layout-dashboard"></i> Dashboard
+      </a>
+      <a href="images.html" class="nav-item" data-icon="image">
+        <i data-lucide="image"></i> Images
+      </a>
+      <a href="albums.html" class="nav-item" data-icon="folder">
+        <i data-lucide="folder"></i> Albums
+      </a>
+
+      <span class="nav-section-label">Manage</span>
+      <a href="users.html" class="nav-item" data-icon="users">
+        <i data-lucide="users"></i> Users
+      </a>
+      <a href="reports.html" class="nav-item" data-icon="flag">
+        <i data-lucide="flag"></i> Reports
+      </a>
+      <a href="settings.html" class="nav-item active" data-icon="settings">
+        <i data-lucide="settings"></i> Settings
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="btn-signout" id="btnSignOut">
+        <i data-lucide="log-out"></i> Sign Out
+      </button>
+    </div>
+  </aside>
+
+  <!-- ── MAIN ────────────────────────────────────────────── -->
+  <div class="admin-main">
+
+    <!-- Header -->
+    <header class="admin-header">
+      <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+        <i data-lucide="menu"></i>
+      </button>
+      <div class="admin-header-title">Settings</div>
+      <div class="admin-header-actions">
+        <button class="theme-toggle-btn" id="themeToggle" aria-label="Toggle theme">
+          <i data-lucide="sun" class="icon-light"></i>
+          <i data-lucide="moon" class="icon-dark"></i>
+        </button>
+        <div class="admin-avatar" id="adminAvatar">A</div>
+      </div>
+    </header>
+
+    <!-- Page Content -->
+    <main class="admin-content">
+
+      <div class="settings-header">
+        <h1>Settings</h1>
+        <p>Manage site configuration, ads, affiliates, and donation settings.</p>
+      </div>
+
+      <!-- Tab Nav -->
+      <nav class="tab-nav" role="tablist">
+        <button class="tab-btn active" data-tab="general" role="tab" aria-selected="true">
+          <i data-lucide="sliders-horizontal"></i> General
+        </button>
+        <button class="tab-btn" data-tab="ads" role="tab" aria-selected="false">
+          <i data-lucide="megaphone"></i> Ads Manager
+        </button>
+        <button class="tab-btn" data-tab="affiliates" role="tab" aria-selected="false">
+          <i data-lucide="link"></i> Affiliate Links
+        </button>
+        <button class="tab-btn" data-tab="donation" role="tab" aria-selected="false">
+          <i data-lucide="heart"></i> Donation Settings
+        </button>
+      </nav>
+
+      <!-- ── TAB: GENERAL ─────────────────────────────────── -->
+      <div class="tab-panel active" id="tab-general">
+
+        <div class="settings-card">
+          <div class="settings-card-title">
+            <i data-lucide="globe"></i> Site Identity
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="siteName">Site Name</label>
+            <input type="text" id="siteName" class="form-input" placeholder="e.g. Imgify" autocomplete="off" />
+            <p class="form-hint">Displayed in browser tabs, OG previews, and the admin header.</p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="logoUrl">Logo URL <span>(optional)</span></label>
+            <input type="url" id="logoUrl" class="form-input" placeholder="https://example.com/logo.png" autocomplete="off" />
+            <p class="form-hint">Full URL to the logo image. Leave blank to use text logo.</p>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <div class="settings-card-title">
+            <i data-lucide="shield-alert"></i> Site Status
+          </div>
+
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="toggle-label">Maintenance Mode</div>
+              <div class="toggle-desc">Hides the upload form and displays a "Down for maintenance" banner on the homepage.</div>
+            </div>
+            <label class="toggle-switch" aria-label="Maintenance Mode">
+              <input type="checkbox" id="maintenanceMode" />
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="save-row">
+          <button class="btn-save" id="saveGeneral">
+            <i data-lucide="save"></i> Save General Settings
+          </button>
+        </div>
+      </div>
+
+      <!-- ── TAB: ADS MANAGER ─────────────────────────────── -->
+      <div class="tab-panel" id="tab-ads">
+
+        <div class="settings-card">
+          <div class="settings-card-title">
+            <i data-lucide="toggle-right"></i> Master Control
+          </div>
+
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="toggle-label">Enable All Ads</div>
+              <div class="toggle-desc">Master switch. Turn off to instantly disable all ad injections site-wide without deleting scripts.</div>
+            </div>
+            <label class="toggle-switch" aria-label="Enable All Ads">
+              <input type="checkbox" id="adsEnabled" />
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <div class="settings-card-title">
+            <i data-lucide="code-2"></i> Ad Scripts
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="headerScript">Header Ad Script</label>
+            <textarea id="headerScript" class="form-textarea" placeholder="<!-- Paste your AdSense publisher script or header ad code here -->"></textarea>
+            <p class="form-hint">Injected into <code>&lt;head&gt;</code> on every public page. Use for AdSense publisher tag or global ad scripts.</p>
+          </div>
+
+          <hr class="section-divider" />
+
+          <div class="form-group">
+            <label class="form-label" for="sidebarScript">Sidebar Ad Script</label>
+            <textarea id="sidebarScript" class="form-textarea" placeholder="<!-- Paste sidebar ad unit code here -->"></textarea>
+            <p class="form-hint">Injected into the designated sidebar ad slot. Recommended: 160×600 or 300×250.</p>
+          </div>
+
+          <hr class="section-divider" />
+
+          <div class="form-group">
+            <label class="form-label" for="contentScript">In-Content Ad Script</label>
+            <textarea id="contentScript" class="form-textarea" placeholder="<!-- Paste in-content ad unit code here -->"></textarea>
+            <p class="form-hint">Injected below the upload result panel and within image view pages.</p>
+          </div>
+        </div>
+
+        <div class="save-row">
+          <button class="btn-save" id="saveAds">
+            <i data-lucide="save"></i> Save Ads Settings
+          </button>
+        </div>
+      </div>
+
+      <!-- ── TAB: AFFILIATE LINKS ─────────────────────────── -->
+      <div class="tab-panel" id="tab-affiliates">
+
+        <div class="settings-card">
+          <div class="settings-card-title">
+            <i data-lucide="external-link"></i> Affiliate Links Manager
+          </div>
+
+          <div class="add-link-bar">
+            <h3 id="affCount">Loading links…</h3>
+            <button class="btn-add-link" id="btnShowAddForm">
+              <i data-lucide="plus"></i> Add Link
+            </button>
+          </div>
+
+          <!-- Inline Add Form -->
+          <div class="add-link-form" id="addLinkForm">
+            <div class="add-link-grid">
+              <div class="form-group">
+                <label class="form-label" for="newAffName">Name *</label>
+                <input type="text" id="newAffName" class="form-input" placeholder="e.g. Hostinger" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="newAffUrl">Affiliate URL *</label>
+                <input type="url" id="newAffUrl" class="form-input" placeholder="https://ref.example.com/?id=abc" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="newAffImageUrl">Banner Image URL <span>(optional)</span></label>
+                <input type="url" id="newAffImageUrl" class="form-input" placeholder="https://example.com/banner.jpg" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="newAffPlacement">Placement *</label>
+                <select id="newAffPlacement" class="form-input">
+                  <option value="header">Header</option>
+                  <option value="footer">Footer</option>
+                  <option value="sidebar">Sidebar</option>
+                  <option value="content">In-Content</option>
+                </select>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+              <label class="toggle-switch" style="margin-left:0;" aria-label="Enable new link">
+                <input type="checkbox" id="newAffEnabled" checked />
+                <span class="toggle-track"></span>
+              </label>
+              <span style="font-size:13px; color:var(--text-secondary); font-weight:500;">Enabled</span>
+            </div>
+            <div class="add-link-actions">
+              <button class="btn-cancel-link" id="btnCancelAdd">Cancel</button>
+              <button class="btn-confirm-link" id="btnConfirmAdd">
+                <i data-lucide="plus"></i> Add to List
+              </button>
+            </div>
+          </div>
+
+          <!-- Links Table -->
+          <div class="aff-table-wrap" id="affTableWrap">
+            <div class="aff-empty" id="affEmptyState">
+              <i data-lucide="link-2-off" style="width:32px;height:32px;margin-bottom:10px;display:block;margin-inline:auto;color:var(--border-strong);"></i>
+              No affiliate links yet. Click "+ Add Link" to get started.
+            </div>
+            <table class="aff-table" id="affTable" style="display:none;">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>URL</th>
+                  <th>Placement</th>
+                  <th>Enabled</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="affTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="save-row">
+          <button class="btn-save" id="saveAffiliates">
+            <i data-lucide="save"></i> Save Affiliate Links
+          </button>
+        </div>
+      </div>
+
+      <!-- ── TAB: DONATION SETTINGS ──────────────────────── -->
+      <div class="tab-panel" id="tab-donation">
+
+        <div class="settings-card">
+          <div class="settings-card-title">
+            <i data-lucide="toggle-right"></i> Donation Page Control
+          </div>
+
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="toggle-label">Enable Donation Page</div>
+              <div class="toggle-desc">Makes <code>/donate.html</code> publicly accessible and shows the "Support Us ☕" link in all page footers.</div>
+            </div>
+            <label class="toggle-switch" aria-label="Enable Donation Page">
+              <input type="checkbox" id="donationEnabled" />
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <div class="settings-card-title">
+            <i data-lucide="pen-line"></i> Page Copy
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="donationHeadline">Custom Headline</label>
+            <input type="text" id="donationHeadline" class="form-input" placeholder="e.g. Support Imgify ☕" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="donationSubtext">Custom Subtext</label>
+            <input type="text" id="donationSubtext" class="form-input" placeholder="e.g. Your support keeps Imgify free and fast." />
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <div class="settings-card-title">
+            <i data-lucide="smartphone"></i> EasyPaisa
+          </div>
+          <div class="donation-method">
+            <div class="form-group">
+              <label class="form-label" for="easyPaisaNumber">EasyPaisa Number</label>
+              <input type="text" id="easyPaisaNumber" class="form-input" placeholder="e.g. 0300-1234567" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="easyPaisaInstructions">Instructions</label>
+              <textarea id="easyPaisaInstructions" class="form-textarea" style="min-height:80px; font-family:var(--font-body); font-size:13.5px;" placeholder="e.g. Open EasyPaisa app → Send Money → Enter number above."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <div class="settings-card-title">
+            <i data-lucide="smartphone"></i> JazzCash
+          </div>
+          <div class="donation-method">
+            <div class="form-group">
+              <label class="form-label" for="jazzCashNumber">JazzCash Number</label>
+              <input type="text" id="jazzCashNumber" class="form-input" placeholder="e.g. 0300-7654321" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="jazzCashInstructions">Instructions</label>
+              <textarea id="jazzCashInstructions" class="form-textarea" style="min-height:80px; font-family:var(--font-body); font-size:13.5px;" placeholder="e.g. Open JazzCash app → Send Money → Enter number above."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <div class="settings-card-title">
+            <i data-lucide="credit-card"></i> Payoneer
+          </div>
+          <div class="donation-method">
+            <div class="form-group">
+              <label class="form-label" for="payoneerEmail">Payoneer Email</label>
+              <input type="email" id="payoneerEmail" class="form-input" placeholder="e.g. youremail@example.com" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="payoneerInstructions">Instructions</label>
+              <textarea id="payoneerInstructions" class="form-textarea" style="min-height:80px; font-family:var(--font-body); font-size:13.5px;" placeholder="e.g. Log in to Payoneer → Send → Enter email above."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="save-row">
+          <button class="btn-save" id="saveDonation">
+            <i data-lucide="save"></i> Save Donation Settings
+          </button>
+        </div>
+      </div>
+
+    </main>
+  </div><!-- /admin-main -->
+</div><!-- /admin-layout -->
+
+<!-- Toast -->
+<div class="toast" id="toast" role="alert" aria-live="polite">
+  <i data-lucide="check-circle" id="toastIcon"></i>
+  <span id="toastMsg">Saved successfully.</span>
+</div>
+
+<!-- Lucide (UMD — must be before module script) -->
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+<script type="module">
+  import { auth, db } from '../js/firebase-init.js';
+  import { initAdminAuth, handleAdminLogout } from '../js/admin/admin-auth.js';
+  import {
+    doc, getDoc, setDoc
+  } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+  import { signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+  initAdminAuth(async (user) => {
+
+  // ── Lucide init ─────────────────────────────────────────
+  if (window.lucide) lucide.createIcons();
+
+  // ── State ───────────────────────────────────────────────
+  let affiliateLinks = []; // local copy, mutated on add/delete
+
+  // ── Refs ────────────────────────────────────────────────
+  const toast       = document.getElementById('toast');
+  const toastMsg    = document.getElementById('toastMsg');
+  const toastIcon   = document.getElementById('toastIcon');
+
+  // General
+  const siteName       = document.getElementById('siteName');
+  const logoUrl        = document.getElementById('logoUrl');
+  const maintenanceMode = document.getElementById('maintenanceMode');
+
+  // Ads
+  const adsEnabled     = document.getElementById('adsEnabled');
+  const headerScript   = document.getElementById('headerScript');
+  const sidebarScript  = document.getElementById('sidebarScript');
+  const contentScript  = document.getElementById('contentScript');
+
+  // Donation
+  const donationEnabled       = document.getElementById('donationEnabled');
+  const donationHeadline      = document.getElementById('donationHeadline');
+  const donationSubtext       = document.getElementById('donationSubtext');
+  const easyPaisaNumber       = document.getElementById('easyPaisaNumber');
+  const easyPaisaInstructions = document.getElementById('easyPaisaInstructions');
+  const jazzCashNumber        = document.getElementById('jazzCashNumber');
+  const jazzCashInstructions  = document.getElementById('jazzCashInstructions');
+  const payoneerEmail         = document.getElementById('payoneerEmail');
+  const payoneerInstructions  = document.getElementById('payoneerInstructions');
+
+  // Affiliate UI
+  const affTableBody  = document.getElementById('affTableBody');
+  const affTable      = document.getElementById('affTable');
+  const affEmptyState = document.getElementById('affEmptyState');
+  const affCount      = document.getElementById('affCount');
+  const addLinkForm   = document.getElementById('addLinkForm');
+
+  // Add-form fields
+  const newAffName      = document.getElementById('newAffName');
+  const newAffUrl       = document.getElementById('newAffUrl');
+  const newAffImageUrl  = document.getElementById('newAffImageUrl');
+  const newAffPlacement = document.getElementById('newAffPlacement');
+  const newAffEnabled   = document.getElementById('newAffEnabled');
+
+  // ── Toast Helper ────────────────────────────────────────
+  let toastTimer = null;
+  function showToast(msg, type = 'success') {
+    toastMsg.textContent = msg;
+    toast.className = `toast ${type}`;
+    // swap icon
+    toastIcon.setAttribute('data-lucide', type === 'success' ? 'check-circle' : 'alert-circle');
+    if (window.lucide) lucide.createIcons();
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 3500);
+  }
+
+  // ── setSaving helper ────────────────────────────────────
+  function setSaving(btn, saving) {
+    btn.disabled = saving;
+    btn.querySelector('i[data-lucide]')?.setAttribute('data-lucide', saving ? 'loader-2' : 'save');
+    if (window.lucide) lucide.createIcons();
+  }
+
+  // ── Load All Data ───────────────────────────────────────
+  async function loadSettings() {
+    try {
+      const [siteSnap, affSnap] = await Promise.all([
+        getDoc(doc(db, 'config', 'siteSettings')),
+        getDoc(doc(db, 'config', 'affiliateLinks'))
+      ]);
+
+      // General + Ads + Donation
+      if (siteSnap.exists()) {
+        const d = siteSnap.data();
+
+        // General
+        siteName.value        = d.siteName        || '';
+        logoUrl.value         = d.logoUrl         || '';
+        maintenanceMode.checked = !!d.maintenanceMode;
+
+        // Ads
+        if (d.ads) {
+          adsEnabled.checked    = !!d.ads.adsEnabled;
+          headerScript.value    = d.ads.headerScript   || '';
+          sidebarScript.value   = d.ads.sidebarScript  || '';
+          contentScript.value   = d.ads.contentScript  || '';
+        }
+
+        // Donation
+        if (d.donationLinks) {
+          const dl = d.donationLinks;
+          donationEnabled.checked          = !!dl.donationEnabled;
+          donationHeadline.value           = dl.headline    || '';
+          donationSubtext.value            = dl.subtext     || '';
+          easyPaisaNumber.value            = dl.easyPaisa?.number        || '';
+          easyPaisaInstructions.value      = dl.easyPaisa?.instructions  || '';
+          jazzCashNumber.value             = dl.jazzCash?.number         || '';
+          jazzCashInstructions.value       = dl.jazzCash?.instructions   || '';
+          payoneerEmail.value              = dl.payoneer?.email          || '';
+          payoneerInstructions.value       = dl.payoneer?.instructions   || '';
+        }
+      }
+
+      // Affiliate Links
+      if (affSnap.exists() && Array.isArray(affSnap.data().links)) {
+        affiliateLinks = affSnap.data().links;
+      } else {
+        affiliateLinks = [];
+      }
+      renderAffiliateLinks();
+
+    } catch (err) {
+      console.error('Settings load error:', err);
+      showToast('Failed to load settings. Check console.', 'error');
+    }
+  }
+
+  // ── Render Affiliate Links Table ────────────────────────
+  function renderAffiliateLinks() {
+    affCount.textContent = `${affiliateLinks.length} link${affiliateLinks.length !== 1 ? 's' : ''} configured`;
+
+    if (affiliateLinks.length === 0) {
+      affEmptyState.style.display = 'block';
+      affTable.style.display = 'none';
+      return;
+    }
+
+    affEmptyState.style.display = 'none';
+    affTable.style.display = 'table';
+
+    affTableBody.innerHTML = affiliateLinks.map((link, idx) => `
+      <tr data-idx="${idx}">
+        <td class="aff-name">${escHtml(link.name)}</td>
+        <td>
+          <a href="${escHtml(link.url)}" target="_blank" rel="noopener" class="aff-url" title="${escHtml(link.url)}">
+            ${escHtml(truncate(link.url, 40))}
+          </a>
+        </td>
+        <td><span class="placement-badge">${escHtml(link.placement || '—')}</span></td>
+        <td>
+          <label class="toggle-switch" style="margin:0;" aria-label="Enable ${escHtml(link.name)}">
+            <input type="checkbox" class="aff-toggle" data-idx="${idx}" ${link.enabled ? 'checked' : ''} />
+            <span class="toggle-track"></span>
+          </label>
+        </td>
+        <td>
+          <button class="btn-delete-aff" data-idx="${idx}" aria-label="Delete ${escHtml(link.name)}">
+            <i data-lucide="trash-2"></i>
+          </button>
+        </td>
+      </tr>
+    `).join('');
+
+    // Re-init icons inside table
+    if (window.lucide) lucide.createIcons();
+
+    // Wire delete buttons
+    affTableBody.querySelectorAll('.btn-delete-aff').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.idx, 10);
+        affiliateLinks.splice(idx, 1);
+        renderAffiliateLinks();
+      });
+    });
+
+    // Wire inline enable toggles
+    affTableBody.querySelectorAll('.aff-toggle').forEach(chk => {
+      chk.addEventListener('change', () => {
+        const idx = parseInt(chk.dataset.idx, 10);
+        affiliateLinks[idx].enabled = chk.checked;
+      });
+    });
+  }
+
+  // ── Tab Switching ────────────────────────────────────────
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.tab;
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('active');
+        b.setAttribute('aria-selected', 'false');
+      });
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      btn.setAttribute('aria-selected', 'true');
+      document.getElementById(`tab-${target}`).classList.add('active');
+    });
+  });
+
+  // ── Add Link Form Toggle ─────────────────────────────────
+  document.getElementById('btnShowAddForm').addEventListener('click', () => {
+    addLinkForm.classList.add('visible');
+    newAffName.focus();
+  });
+
+  document.getElementById('btnCancelAdd').addEventListener('click', () => {
+    addLinkForm.classList.remove('visible');
+    clearAddForm();
+  });
+
+  document.getElementById('btnConfirmAdd').addEventListener('click', () => {
+    const name      = newAffName.value.trim();
+    const url       = newAffUrl.value.trim();
+    const imageUrl  = newAffImageUrl.value.trim();
+    const placement = newAffPlacement.value;
+    const enabled   = newAffEnabled.checked;
+
+    if (!name) { newAffName.focus(); showToast('Name is required.', 'error'); return; }
+    if (!url)  { newAffUrl.focus();  showToast('Affiliate URL is required.', 'error'); return; }
+
+    const newLink = {
+      id: genId(),
+      name,
+      url,
+      imageUrl,
+      placement,
+      enabled
+    };
+
+    affiliateLinks.push(newLink);
+    renderAffiliateLinks();
+    addLinkForm.classList.remove('visible');
+    clearAddForm();
+  });
+
+  function clearAddForm() {
+    newAffName.value      = '';
+    newAffUrl.value       = '';
+    newAffImageUrl.value  = '';
+    newAffPlacement.value = 'header';
+    newAffEnabled.checked = true;
+  }
+
+  // ── Save: General ────────────────────────────────────────
+  document.getElementById('saveGeneral').addEventListener('click', async () => {
+    const btn = document.getElementById('saveGeneral');
+    setSaving(btn, true);
+    try {
+      await setDoc(doc(db, 'config', 'siteSettings'), {
+        siteName:        siteName.value.trim(),
+        logoUrl:         logoUrl.value.trim(),
+        maintenanceMode: maintenanceMode.checked
+      }, { merge: true });
+      showToast('General settings saved.', 'success');
+    } catch (err) {
+      console.error(err);
+      showToast('Save failed: ' + err.message, 'error');
+    } finally {
+      setSaving(btn, false);
+    }
+  });
+
+  // ── Save: Ads ────────────────────────────────────────────
+  document.getElementById('saveAds').addEventListener('click', async () => {
+    const btn = document.getElementById('saveAds');
+    setSaving(btn, true);
+    try {
+      await setDoc(doc(db, 'config', 'siteSettings'), {
+        ads: {
+          adsEnabled:    adsEnabled.checked,
+          headerScript:  headerScript.value.trim(),
+          sidebarScript: sidebarScript.value.trim(),
+          contentScript: contentScript.value.trim()
+        }
+      }, { merge: true });
+      showToast('Ads settings saved.', 'success');
+    } catch (err) {
+      console.error(err);
+      showToast('Save failed: ' + err.message, 'error');
+    } finally {
+      setSaving(btn, false);
+    }
+  });
+
+  // ── Save: Affiliate Links ────────────────────────────────
+  document.getElementById('saveAffiliates').addEventListener('click', async () => {
+    const btn = document.getElementById('saveAffiliates');
+    setSaving(btn, true);
+    try {
+      await setDoc(doc(db, 'config', 'affiliateLinks'), {
+        links: affiliateLinks
+      }, { merge: true });
+      showToast('Affiliate links saved.', 'success');
+    } catch (err) {
+      console.error(err);
+      showToast('Save failed: ' + err.message, 'error');
+    } finally {
+      setSaving(btn, false);
+    }
+  });
+
+  // ── Save: Donation ───────────────────────────────────────
+  document.getElementById('saveDonation').addEventListener('click', async () => {
+    const btn = document.getElementById('saveDonation');
+    setSaving(btn, true);
+    try {
+      await setDoc(doc(db, 'config', 'siteSettings'), {
+        donationLinks: {
+          donationEnabled: donationEnabled.checked,
+          headline:        donationHeadline.value.trim(),
+          subtext:         donationSubtext.value.trim(),
+          easyPaisa: {
+            number:       easyPaisaNumber.value.trim(),
+            instructions: easyPaisaInstructions.value.trim()
+          },
+          jazzCash: {
+            number:       jazzCashNumber.value.trim(),
+            instructions: jazzCashInstructions.value.trim()
+          },
+          payoneer: {
+            email:        payoneerEmail.value.trim(),
+            instructions: payoneerInstructions.value.trim()
+          }
+        }
+      }, { merge: true });
+      showToast('Donation settings saved.', 'success');
+    } catch (err) {
+      console.error(err);
+      showToast('Save failed: ' + err.message, 'error');
+    } finally {
+      setSaving(btn, false);
+    }
+  });
+
+  // ── Sign Out ─────────────────────────────────────────────
+  document.getElementById('btnSignOut').addEventListener('click', async () => {
+    await signOut(auth);
+    window.location.href = '/admin/login';
+  });
+
+  // ── Sidebar Toggle (mobile) ──────────────────────────────
+  document.getElementById('sidebarToggle')?.addEventListener('click', () => {
+    document.getElementById('sidebar').classList.toggle('open');
+  });
+
+  // ── Theme Toggle ─────────────────────────────────────────
+  document.getElementById('themeToggle')?.addEventListener('click', () => {
+    const html = document.documentElement;
+    const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', next);
+    localStorage.setItem('imgify-theme', next);
+  });
+
+  // ── Admin Avatar initials ────────────────────────────────
+  auth.onAuthStateChanged(user => {
+    if (user?.email) {
+      document.getElementById('adminAvatar').textContent =
+        user.email.charAt(0).toUpperCase();
+    }
+  });
+
+  // ── Utilities ────────────────────────────────────────────
+  function escHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function truncate(str, max) {
+    if (!str) return '';
+    return str.length > max ? str.slice(0, max) + '…' : str;
+  }
+
+  function genId() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+
+  // ── Init ─────────────────────────────────────────────────
+  await loadSettings();
+
+  }); // end initAdminAuth
+</script>
+
+</body>
+</html>

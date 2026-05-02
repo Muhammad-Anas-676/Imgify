@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>Albums · Imgify Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/global.css">
+  <link rel="stylesheet" href="../css/layout.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/pages.css">
+  <script type="module" src="../js/theme.js"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    /* ── PAGE-LOCAL STYLES ── */
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .page-header h1 {
+      font-family: var(--font-display);
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.3px;
+    }
+    .page-header .subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* ── TOOLBAR ── */
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .search-wrap {
+      position: relative;
+      flex: 1;
+      min-width: 200px;
+      max-width: 320px;
+    }
+    .search-wrap .search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-hint);
+      width: 15px;
+      height: 15px;
+    }
+    .search-input {
+      width: 100%;
+      padding: 7px 10px 7px 32px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .search-input:focus {
+      border-color: var(--accent);
+    }
+    .filter-group {
+      display: flex;
+      gap: 4px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 3px;
+    }
+    .filter-btn {
+      padding: 5px 11px;
+      border: none;
+      border-radius: 5px;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: var(--font-body);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+    .filter-btn.active {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .stat-badge {
+      font-size: 12px;
+      color: var(--text-muted);
+      padding: 6px 10px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      white-space: nowrap;
+    }
+    .stat-badge span {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    /* ── TABLE ── */
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg-primary);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    thead th {
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--bg-secondary); }
+    td {
+      padding: 10px 14px;
+      color: var(--text-secondary);
+      vertical-align: middle;
+    }
+
+    /* ── THUMBNAIL ── */
+    .thumb-cell {
+      width: 40px;
+      height: 40px;
+      border-radius: 6px;
+      object-fit: cover;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      display: block;
+      flex-shrink: 0;
+    }
+    .thumb-placeholder {
+      width: 40px;
+      height: 40px;
+      border-radius: 6px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-hint);
+      flex-shrink: 0;
+    }
+
+    /* ── INLINE EDIT ── */
+    .name-cell {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 160px;
+    }
+    .album-name-text {
+      font-weight: 500;
+      color: var(--text-primary);
+      cursor: pointer;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .album-name-input {
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+      background: var(--bg-primary);
+      border: 1px solid var(--accent);
+      border-radius: 5px;
+      padding: 3px 7px;
+      outline: none;
+      max-width: 180px;
+      width: 180px;
+    }
+    .edit-icon-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 2px;
+      color: var(--text-hint);
+      display: flex;
+      align-items: center;
+      border-radius: 4px;
+      transition: color 0.15s, background 0.15s;
+      flex-shrink: 0;
+    }
+    .edit-icon-btn:hover {
+      color: var(--accent);
+      background: var(--accent-light);
+    }
+
+    /* ── MONO ID ── */
+    .mono-id {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      max-width: 110px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* ── PRIVACY PILL (clickable cycle) ── */
+    .privacy-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+    .privacy-pill:hover { opacity: 0.8; transform: scale(0.97); }
+    .privacy-pill:active { transform: scale(0.93); }
+    .pill-public {
+      background: var(--success-light);
+      color: var(--success);
+    }
+    .pill-unlisted {
+      background: var(--warning-light);
+      color: var(--warning);
+    }
+    .pill-private {
+      background: var(--purple-light);
+      color: var(--purple);
+    }
+
+    /* ── STATUS PILL ── */
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+    .status-active {
+      background: var(--success-light);
+      color: var(--success);
+    }
+    .status-deleted {
+      background: var(--danger-light);
+      color: var(--danger);
+    }
+
+    /* ── ACTIONS ── */
+    .actions-cell {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-family: var(--font-body);
+      font-size: 12px;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      background: var(--bg-primary);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    .action-btn:hover {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+    }
+    .action-btn.danger {
+      color: var(--danger);
+      border-color: var(--danger-light);
+    }
+    .action-btn.danger:hover {
+      background: var(--danger-light);
+      border-color: var(--danger);
+    }
+    .action-btn.success {
+      color: var(--success);
+      border-color: var(--success-light);
+    }
+    .action-btn.success:hover {
+      background: var(--success-light);
+      border-color: var(--success);
+    }
+    .action-btn svg {
+      width: 13px;
+      height: 13px;
+    }
+
+    /* ── EMPTY STATE ── */
+    .empty-state {
+      text-align: center;
+      padding: 56px 24px;
+      color: var(--text-muted);
+    }
+    .empty-state svg {
+      width: 40px;
+      height: 40px;
+      color: var(--text-hint);
+      margin: 0 auto 12px;
+      display: block;
+    }
+    .empty-state p {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    /* ── PAGINATION ── */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 16px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .page-info {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .page-controls {
+      display: flex;
+      gap: 4px;
+    }
+    .page-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-primary);
+      color: var(--text-secondary);
+      font-family: var(--font-body);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .page-btn:hover:not(:disabled) {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border-color: var(--border-strong);
+    }
+    .page-btn.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .page-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* ── LOADING SKELETON ── */
+    .skeleton-row td {
+      padding: 14px;
+    }
+    .skeleton-block {
+      height: 14px;
+      border-radius: 4px;
+      background: linear-gradient(90deg, var(--bg-tertiary) 25%, var(--bg-secondary) 50%, var(--bg-tertiary) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    .sk-thumb {
+      width: 40px;
+      height: 40px;
+      border-radius: 6px;
+    }
+    .sk-name { width: 140px; }
+    .sk-id { width: 90px; }
+    .sk-pill { width: 60px; height: 20px; border-radius: 20px; }
+    .sk-num { width: 30px; }
+    .sk-date { width: 80px; }
+
+    /* ── TOAST ── */
+    .toast-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 9999;
+      pointer-events: none;
+    }
+    .toast {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 500;
+      color: #fff;
+      background: #1a1a1a;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+      animation: toastIn 0.25s ease forwards;
+      pointer-events: all;
+      max-width: 320px;
+    }
+    .toast.success { background: var(--success); }
+    .toast.error { background: var(--danger); }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── SAVING INDICATOR ── */
+    .saving-dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin-left: 4px;
+      animation: pulse 0.8s infinite;
+      vertical-align: middle;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="admin-layout">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="admin-sidebar">
+    <div class="sidebar-header">
+      <a href="index.html" class="sidebar-logo">
+        <span class="logo-text">Imgify</span>
+        <span class="logo-badge">Admin</span>
+      </a>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="index.html" class="nav-link">
+        <i data-lucide="layout-dashboard"></i>
+        <span>Dashboard</span>
+      </a>
+      <a href="images.html" class="nav-link">
+        <i data-lucide="image"></i>
+        <span>Images</span>
+      </a>
+      <a href="albums.html" class="nav-link active">
+        <i data-lucide="folder-open"></i>
+        <span>Albums</span>
+      </a>
+      <a href="users.html" class="nav-link">
+        <i data-lucide="users"></i>
+        <span>Users</span>
+      </a>
+      <a href="reports.html" class="nav-link">
+        <i data-lucide="flag"></i>
+        <span>Reports</span>
+      </a>
+      <a href="settings.html" class="nav-link">
+        <i data-lucide="settings"></i>
+        <span>Settings</span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="sidebar-logout-btn" id="logoutBtn">
+        <i data-lucide="log-out"></i>
+        <span>Sign Out</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <div class="admin-main">
+
+    <!-- top header -->
+    <header class="admin-header">
+      <div class="header-left">
+        <button class="mobile-menu-btn" id="menuToggle" aria-label="Toggle sidebar">
+          <i data-lucide="menu"></i>
+        </button>
+      </div>
+      <div class="header-right">
+        <button class="theme-toggle-btn" id="themeToggle" aria-label="Toggle theme">
+          <i data-lucide="sun" class="icon-light"></i>
+          <i data-lucide="moon" class="icon-dark"></i>
+        </button>
+        <div class="header-admin-badge" id="adminEmailBadge">Admin</div>
+      </div>
+    </header>
+
+    <!-- page content -->
+    <div class="admin-content">
+
+      <div class="page-header">
+        <div>
+          <h1>Albums</h1>
+          <p class="subtitle">Manage all albums and their visibility</p>
+        </div>
+        <div class="stat-badge" id="totalBadge">Loading…</div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="search-wrap">
+          <svg class="search-icon" data-lucide="search"></svg>
+          <input
+            type="text"
+            class="search-input"
+            id="searchInput"
+            placeholder="Search by name or ID…"
+            autocomplete="off"
+          >
+        </div>
+
+        <!-- Privacy filter -->
+        <div class="filter-group" id="privacyFilter" role="group" aria-label="Filter by privacy">
+          <button class="filter-btn active" data-privacy="all">All</button>
+          <button class="filter-btn" data-privacy="public">Public</button>
+          <button class="filter-btn" data-privacy="unlisted">Unlisted</button>
+          <button class="filter-btn" data-privacy="private">Private</button>
+        </div>
+
+        <!-- Status filter -->
+        <div class="filter-group" id="statusFilter" role="group" aria-label="Filter by status">
+          <button class="filter-btn active" data-status="active">Active</button>
+          <button class="filter-btn" data-status="deleted">Deleted</button>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-wrap">
+        <table id="albumsTable" aria-label="Albums table">
+          <thead>
+            <tr>
+              <th>Cover</th>
+              <th>Album Name</th>
+              <th>ID</th>
+              <th>Privacy</th>
+              <th>Images</th>
+              <th>Created</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="albumsTbody">
+            <!-- skeleton -->
+            <tr class="skeleton-row">
+              <td><div class="skeleton-block sk-thumb"></div></td>
+              <td><div class="skeleton-block sk-name"></div></td>
+              <td><div class="skeleton-block sk-id"></div></td>
+              <td><div class="skeleton-block sk-pill"></div></td>
+              <td><div class="skeleton-block sk-num"></div></td>
+              <td><div class="skeleton-block sk-date"></div></td>
+              <td><div class="skeleton-block sk-pill"></div></td>
+              <td><div class="skeleton-block sk-name"></div></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Empty state (hidden initially) -->
+      <div id="emptyState" style="display:none;">
+        <div class="empty-state">
+          <i data-lucide="folder-open"></i>
+          <p id="emptyMsg">No albums found.</p>
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination" id="paginationWrap" style="display:none;">
+        <span class="page-info" id="pageInfo"></span>
+        <div class="page-controls" id="pageControls"></div>
+      </div>
+
+    </div><!-- /.admin-content -->
+  </div><!-- /.admin-main -->
+</div><!-- /.admin-layout -->
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script type="module">
+  import { auth, db } from '../js/firebase-init.js';
+  import { initAdminAuth, handleAdminLogout } from '../js/admin/admin-auth.js';
+  import {
+    collection,
+    query,
+    getDocs,
+    orderBy,
+    updateDoc,
+    doc
+  } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+  import { signOut } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+  initAdminAuth(async (user) => {
+  // ── LUCIDE ──
+  lucide.createIcons();
+
+  // ── ADMIN EMAIL ──
+  if (user?.email) {
+    const badge = document.getElementById('adminEmailBadge');
+    if (badge) badge.textContent = user.email;
+  }
+
+  // ── THEME TOGGLE ──
+  document.getElementById('themeToggle')?.addEventListener('click', () => {
+    const html = document.documentElement;
+    const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', next);
+    localStorage.setItem('imgify-theme', next);
+  });
+
+  // ── MOBILE MENU ──
+  document.getElementById('menuToggle')?.addEventListener('click', () => {
+    document.querySelector('.admin-sidebar')?.classList.toggle('open');
+  });
+
+  // ── LOGOUT ──
+  document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+    await signOut(auth);
+    window.location.href = '/admin/login';
+  });
+
+  // ── TOAST ──
+  function showToast(msg, type = 'default') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = msg;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3200);
+  }
+
+  // ── STATE ──
+  const PAGE_SIZE = 20;
+  let allAlbums = [];        // raw from Firestore
+  let filtered = [];         // after client-side filters
+  let currentPage = 1;
+  let privacyFilter = 'all';
+  let statusFilter = 'active';
+  let searchQuery = '';
+
+  // ── FETCH ──
+  async function fetchAlbums() {
+    const tbody = document.getElementById('albumsTbody');
+    try {
+      const q = query(collection(db, 'albums'), orderBy('createdAt', 'desc'));
+      const snap = await getDocs(q);
+      allAlbums = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      applyFilters();
+    } catch (err) {
+      console.error('fetchAlbums error:', err);
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--danger);">Failed to load albums. Check Firestore rules.</td></tr>`;
+      showToast('Failed to load albums', 'error');
+    }
+  }
+
+  // ── FILTER + SEARCH ──
+  function applyFilters() {
+    const q = searchQuery.trim().toLowerCase();
+
+    filtered = allAlbums.filter(a => {
+      // status filter
+      const isDeleted = a.deleted === true;
+      if (statusFilter === 'active' && isDeleted) return false;
+      if (statusFilter === 'deleted' && !isDeleted) return false;
+
+      // privacy filter
+      if (privacyFilter !== 'all' && a.privacy !== privacyFilter) return false;
+
+      // search
+      if (q) {
+        const nameMatch = (a.name || '').toLowerCase().includes(q);
+        const idMatch = a.id.toLowerCase().includes(q);
+        if (!nameMatch && !idMatch) return false;
+      }
+
+      return true;
+    });
+
+    currentPage = 1;
+    updateTotalBadge();
+    renderPage();
+  }
+
+  function updateTotalBadge() {
+    const badge = document.getElementById('totalBadge');
+    if (!badge) return;
+    badge.innerHTML = `<span>${filtered.length}</span> album${filtered.length !== 1 ? 's' : ''}`;
+  }
+
+  // ── RENDER PAGE ──
+  function renderPage() {
+    const tbody = document.getElementById('albumsTbody');
+    const emptyState = document.getElementById('emptyState');
+    const paginationWrap = document.getElementById('paginationWrap');
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = '';
+      emptyState.style.display = 'block';
+      document.getElementById('emptyMsg').textContent =
+        searchQuery ? `No albums matching "${searchQuery}"` : 'No albums found.';
+      paginationWrap.style.display = 'none';
+      lucide.createIcons();
+      return;
+    }
+
+    emptyState.style.display = 'none';
+
+    const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const slice = filtered.slice(start, start + PAGE_SIZE);
+
+    tbody.innerHTML = slice.map(album => buildRow(album)).join('');
+
+    // attach inline events
+    attachRowEvents();
+    lucide.createIcons();
+    renderPagination(totalPages);
+  }
+
+  // ── BUILD ROW ──
+  function buildRow(album) {
+    const isDeleted = album.deleted === true;
+    const privacyClass = privacyPillClass(album.privacy);
+    const privacyLabel = album.privacy || 'public';
+    const createdAt = album.createdAt?.toDate
+      ? formatDate(album.createdAt.toDate())
+      : '—';
+    const imageCount = album.imageCount ?? 0;
+    const thumbHtml = album.coverUrl
+      ? `<img class="thumb-cell" src="${escapeHtml(album.coverUrl)}" alt="Cover" loading="lazy">`
+      : `<div class="thumb-placeholder"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
+
+    return `
+      <tr data-id="${album.id}">
+        <td>${thumbHtml}</td>
+        <td>
+          <div class="name-cell">
+            <span class="album-name-text" title="${escapeHtml(album.name || '')}">${escapeHtml(album.name || 'Untitled')}</span>
+            <button class="edit-icon-btn" data-action="edit-name" aria-label="Edit album name">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+          </div>
+        </td>
+        <td><span class="mono-id" title="${album.id}">${album.id}</span></td>
+        <td>
+          <button class="privacy-pill ${privacyClass}" data-action="cycle-privacy" data-privacy="${privacyLabel}" aria-label="Change privacy">
+            ${privacyLabel}
+          </button>
+        </td>
+        <td>${imageCount}</td>
+        <td>${createdAt}</td>
+        <td>
+          <span class="status-pill ${isDeleted ? 'status-deleted' : 'status-active'}">
+            ${isDeleted ? 'Deleted' : 'Active'}
+          </span>
+        </td>
+        <td>
+          <div class="actions-cell">
+            <button class="action-btn" data-action="view" aria-label="View album">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              View
+            </button>
+            ${isDeleted
+              ? `<button class="action-btn success" data-action="restore" aria-label="Restore album">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.27"/></svg>
+                  Restore
+                </button>`
+              : `<button class="action-btn danger" data-action="delete" aria-label="Delete album">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                  Delete
+                </button>`
+            }
+          </div>
+        </td>
+      </tr>
+    `;
+  }
+
+  // ── ATTACH ROW EVENTS ──
+  function attachRowEvents() {
+    const tbody = document.getElementById('albumsTbody');
+
+    tbody.querySelectorAll('[data-action="edit-name"]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const row = btn.closest('tr');
+        const albumId = row.dataset.id;
+        const nameCell = row.querySelector('.name-cell');
+        const nameSpan = nameCell.querySelector('.album-name-text');
+        const currentName = nameSpan.textContent;
+
+        // replace span with input
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'album-name-input';
+        input.value = currentName;
+        nameSpan.replaceWith(input);
+        btn.style.display = 'none';
+        input.focus();
+        input.select();
+
+        async function saveName() {
+          const newName = input.value.trim();
+          if (!newName || newName === currentName) {
+            // revert
+            input.replaceWith(nameSpan);
+            btn.style.display = '';
+            return;
+          }
+          try {
+            await updateDoc(doc(db, 'albums', albumId), { name: newName });
+            nameSpan.textContent = newName;
+            nameSpan.title = newName;
+            // update local cache
+            const idx = allAlbums.findIndex(a => a.id === albumId);
+            if (idx !== -1) allAlbums[idx].name = newName;
+            const fidx = filtered.findIndex(a => a.id === albumId);
+            if (fidx !== -1) filtered[fidx].name = newName;
+            showToast('Album name updated', 'success');
+          } catch (err) {
+            console.error('saveName error:', err);
+            showToast('Failed to save name', 'error');
+          }
+          input.replaceWith(nameSpan);
+          btn.style.display = '';
+        }
+
+        input.addEventListener('blur', saveName);
+        input.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Enter') { input.blur(); }
+          if (ev.key === 'Escape') {
+            input.value = currentName; // prevent save
+            // override blur handler once
+            input.removeEventListener('blur', saveName);
+            input.replaceWith(nameSpan);
+            btn.style.display = '';
+          }
+        });
+      });
+    });
+
+    tbody.querySelectorAll('[data-action="cycle-privacy"]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const row = btn.closest('tr');
+        const albumId = row.dataset.id;
+        const current = btn.dataset.privacy;
+        const next = { public: 'unlisted', unlisted: 'private', private: 'public' }[current] || 'public';
+
+        btn.disabled = true;
+        try {
+          await updateDoc(doc(db, 'albums', albumId), { privacy: next });
+          btn.dataset.privacy = next;
+          btn.className = `privacy-pill ${privacyPillClass(next)}`;
+          btn.textContent = next;
+          // update cache
+          const idx = allAlbums.findIndex(a => a.id === albumId);
+          if (idx !== -1) allAlbums[idx].privacy = next;
+          const fidx = filtered.findIndex(a => a.id === albumId);
+          if (fidx !== -1) filtered[fidx].privacy = next;
+          showToast(`Privacy set to ${next}`, 'success');
+        } catch (err) {
+          console.error('cyclePrivacy error:', err);
+          showToast('Failed to update privacy', 'error');
+        }
+        btn.disabled = false;
+      });
+    });
+
+    tbody.querySelectorAll('[data-action="delete"]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const row = btn.closest('tr');
+        const albumId = row.dataset.id;
+        if (!confirm('Soft-delete this album? It can be restored later.')) return;
+        try {
+          await updateDoc(doc(db, 'albums', albumId), { deleted: true });
+          const idx = allAlbums.findIndex(a => a.id === albumId);
+          if (idx !== -1) allAlbums[idx].deleted = true;
+          applyFilters();
+          showToast('Album deleted', 'success');
+        } catch (err) {
+          console.error('delete error:', err);
+          showToast('Failed to delete album', 'error');
+        }
+      });
+    });
+
+    tbody.querySelectorAll('[data-action="restore"]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const row = btn.closest('tr');
+        const albumId = row.dataset.id;
+        try {
+          await updateDoc(doc(db, 'albums', albumId), { deleted: false });
+          const idx = allAlbums.findIndex(a => a.id === albumId);
+          if (idx !== -1) allAlbums[idx].deleted = false;
+          applyFilters();
+          showToast('Album restored', 'success');
+        } catch (err) {
+          console.error('restore error:', err);
+          showToast('Failed to restore album', 'error');
+        }
+      });
+    });
+
+    tbody.querySelectorAll('[data-action="view"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const row = btn.closest('tr');
+        const albumId = row.dataset.id;
+        window.open(`/album.html?id=${albumId}`, '_blank', 'noopener');
+      });
+    });
+  }
+
+  // ── PAGINATION ──
+  function renderPagination(totalPages) {
+    const wrap = document.getElementById('paginationWrap');
+    const info = document.getElementById('pageInfo');
+    const controls = document.getElementById('pageControls');
+
+    const start = (currentPage - 1) * PAGE_SIZE + 1;
+    const end = Math.min(currentPage * PAGE_SIZE, filtered.length);
+    info.textContent = `${start}–${end} of ${filtered.length}`;
+
+    if (totalPages <= 1) {
+      wrap.style.display = 'none';
+      return;
+    }
+    wrap.style.display = 'flex';
+
+    let html = `<button class="page-btn" data-page="prev" ${currentPage === 1 ? 'disabled' : ''} aria-label="Previous page">‹</button>`;
+
+    const range = getPageRange(currentPage, totalPages);
+    range.forEach(p => {
+      if (p === '…') {
+        html += `<span class="page-btn" style="cursor:default;border:none;background:none;">…</span>`;
+      } else {
+        html += `<button class="page-btn ${p === currentPage ? 'active' : ''}" data-page="${p}">${p}</button>`;
+      }
+    });
+
+    html += `<button class="page-btn" data-page="next" ${currentPage === totalPages ? 'disabled' : ''} aria-label="Next page">›</button>`;
+    controls.innerHTML = html;
+
+    controls.querySelectorAll('.page-btn[data-page]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const p = btn.dataset.page;
+        if (p === 'prev') { if (currentPage > 1) { currentPage--; renderPage(); } }
+        else if (p === 'next') { if (currentPage < totalPages) { currentPage++; renderPage(); } }
+        else { currentPage = parseInt(p); renderPage(); }
+        document.getElementById('albumsTable').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+  }
+
+  function getPageRange(cur, total) {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    if (cur <= 4) return [1, 2, 3, 4, 5, '…', total];
+    if (cur >= total - 3) return [1, '…', total-4, total-3, total-2, total-1, total];
+    return [1, '…', cur-1, cur, cur+1, '…', total];
+  }
+
+  // ── HELPERS ──
+  function privacyPillClass(privacy) {
+    return { public: 'pill-public', unlisted: 'pill-unlisted', private: 'pill-private' }[privacy] || 'pill-public';
+  }
+
+  function formatDate(d) {
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // ── FILTER LISTENERS ──
+  document.getElementById('privacyFilter').addEventListener('click', e => {
+    const btn = e.target.closest('.filter-btn');
+    if (!btn) return;
+    document.querySelectorAll('#privacyFilter .filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    privacyFilter = btn.dataset.privacy;
+    applyFilters();
+  });
+
+  document.getElementById('statusFilter').addEventListener('click', e => {
+    const btn = e.target.closest('.filter-btn');
+    if (!btn) return;
+    document.querySelectorAll('#statusFilter .filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    statusFilter = btn.dataset.status;
+    applyFilters();
+  });
+
+  let searchTimer;
+  document.getElementById('searchInput').addEventListener('input', e => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      searchQuery = e.target.value;
+      applyFilters();
+    }, 220);
+  });
+
+  // ── INIT ──
+  await fetchAlbums();
+  }); // end initAdminAuth
+</script>
+
+</body>
+</html>

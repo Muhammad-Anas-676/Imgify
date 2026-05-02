@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Image Expired · Imgify</title>
+  <meta name="robots" content="noindex">
+  <meta property="og:title" content="Image Expired · Imgify">
+  <meta property="og:description" content="This image has expired and is no longer available.">
+
+  <!-- theme.js FIRST — prevents FOUC -->
+  <script type="module" src="/js/theme.js"></script>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.383.0/umd/lucide.min.js"></script>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/css/global.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/pages.css">
+
+  <style>
+    /* ── EXPIRED PAGE SPECIFIC ── */
+    .expired-page { min-height: 100vh; display: flex; flex-direction: column; }
+    .expired-main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 24px 60px; }
+    
+    /* ── SKELETON ── */
+    .skeleton-container { display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%; max-width: 480px; }
+    .skeleton-thumb { width: 200px; height: 200px; border-radius: 12px; background: var(--bg-tertiary); animation: skeleton-pulse 1.4s ease-in-out infinite; }
+    .skeleton-line { height: 14px; border-radius: 6px; background: var(--bg-tertiary); animation: skeleton-pulse 1.4s ease-in-out infinite; }
+    .skeleton-line.w-60 { width: 60%; animation-delay: 0.1s; }
+    .skeleton-line.w-40 { width: 40%; animation-delay: 0.2s; }
+    .skeleton-line.w-50 { width: 50%; animation-delay: 0.15s; }
+    @keyframes skeleton-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    
+    /* ── HERO CARD ── */
+    .expired-card { width: 100%; max-width: 520px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0; opacity: 0; transform: translateY(20px); animation: fade-up 0.5s ease forwards; }
+    @keyframes fade-up { to { opacity: 1; transform: translateY(0); } }
+    
+    /* ── THUMBNAIL AREA ── */
+    .thumb-wrapper { position: relative; width: 200px; height: 200px; border-radius: 12px; overflow: hidden; margin-bottom: 28px; flex-shrink: 0; opacity: 0; animation: fade-up 0.5s ease 0.05s forwards; }
+    .thumb-img { width: 100%; height: 100%; object-fit: cover; filter: blur(3px) brightness(0.6); display: block; }
+    .thumb-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; background: rgba(0, 0, 0, 0.35); }
+    .thumb-icon-placeholder { width: 200px; height: 200px; border-radius: 12px; background: var(--bg-tertiary); border: 1px dashed var(--border-strong); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; margin-bottom: 28px; opacity: 0; animation: fade-up 0.5s ease 0.05s forwards; }
+    .thumb-icon-placeholder i { color: var(--text-hint); }
+    .thumb-icon-placeholder span { font-size: 12px; color: var(--text-hint); font-family: var(--font-body); }
+    
+    /* ── EXPIRED BADGE ── */
+    .expired-badge { display: inline-flex; align-items: center; gap: 6px; background: var(--warning-light); color: var(--warning); border-radius: 20px; padding: 5px 14px; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 16px; opacity: 0; animation: fade-up 0.5s ease 0.1s forwards; }
+    .expired-badge i { width: 13px; height: 13px; }
+    
+    /* ── TITLE + META ── */
+    .expired-title { font-family: var(--font-display); font-size: 32px; font-weight: 700; letter-spacing: -0.5px; color: var(--text-primary); margin-bottom: 10px; line-height: 1.2; opacity: 0; animation: fade-up 0.5s ease 0.15s forwards; }
+    .expired-subtitle { font-size: 15px; color: var(--text-muted); margin-bottom: 24px; line-height: 1.6; opacity: 0; animation: fade-up 0.5s ease 0.2s forwards; }
+    
+    /* ── METADATA PILLS ── */
+    .expired-meta { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 32px; opacity: 0; animation: fade-up 0.5s ease 0.25s forwards; }
+    .meta-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font-size: 13px; color: var(--text-secondary); font-family: var(--font-body); }
+    .meta-chip i { width: 14px; height: 14px; color: var(--text-muted); }
+    .meta-chip .chip-value { font-family: var(--font-mono); font-size: 12px; color: var(--text-primary); font-weight: 500; }
+    
+    /* ── CTAs ── */
+    .expired-actions { display: flex; flex-direction: column; gap: 10px; width: 100%; opacity: 0; animation: fade-up 0.5s ease 0.3s forwards; }
+    .btn-primary-expired { display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--accent); color: #fff; border: none; border-radius: 10px; padding: 13px 24px; font-size: 15px; font-weight: 600; font-family: var(--font-body); cursor: pointer; text-decoration: none; transition: background 0.2s, transform 0.15s; }
+    .btn-primary-expired:hover { background: var(--accent-dark); transform: translateY(-1px); }
+    .btn-secondary-expired { display: flex; align-items: center; justify-content: center; gap: 8px; background: transparent; color: var(--text-secondary); border: 1px solid var(--border-strong); border-radius: 10px; padding: 13px 24px; font-size: 15px; font-weight: 500; font-family: var(--font-body); cursor: pointer; text-decoration: none; transition: background 0.2s, border-color 0.2s, color 0.2s; }
+    .btn-secondary-expired:hover { background: var(--bg-secondary); border-color: var(--border-strong); color: var(--text-primary); }
+    
+    /* ── AD SLOT ── */
+    .ad-section { width: 100%; max-width: 728px; margin: 0 auto 48px; padding: 0 24px; }
+    
+    /* ── NOT FOUND STATE ── */
+    .not-found-card { display: flex; flex-direction: column; align-items: center; text-align: center; max-width: 420px; opacity: 0; animation: fade-up 0.5s ease forwards; }
+    .not-found-icon { width: 72px; height: 72px; border-radius: 50%; background: var(--danger-light); display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
+    .not-found-icon i { color: var(--danger); width: 32px; height: 32px; }
+    .not-found-title { font-family: var(--font-display); font-size: 28px; font-weight: 700; color: var(--text-primary); margin-bottom: 10px; letter-spacing: -0.3px; }
+    .not-found-sub { font-size: 15px; color: var(--text-muted); margin-bottom: 28px; line-height: 1.6; }
+    
+    /* ── RESPONSIVE ── */
+    @media (max-width: 375px) { .expired-title { font-size: 26px; } .expired-main { padding: 60px 16px 40px; } .thumb-wrapper, .thumb-icon-placeholder { width: 160px; height: 160px; } .expired-actions { flex-direction: column; } }
+  </style>
+</head>
+
+<body class="expired-page">
+
+  <!-- ── NAVBAR ── -->
+  <nav class="navbar">
+    <div class="navbar-inner">
+      <a href="/" class="navbar-logo">
+        <span class="logo-mark">Img</span><span class="logo-accent">ify</span>
+      </a>
+
+      <div class="navbar-links">
+        <a href="/" class="nav-link">Upload</a>
+        <a href="/dashboard.html" class="nav-link">Dashboard</a>
+        <a href="/donate.html" class="nav-link">Donate</a>
+      </div>
+
+      <div class="navbar-actions">
+        <button class="btn-icon theme-toggle" id="themeToggle" aria-label="Toggle theme">
+          <i data-lucide="sun" class="icon-sun"></i>
+          <i data-lucide="moon" class="icon-moon"></i>
+        </button>
+        <button class="btn-icon nav-drawer-toggle" id="navDrawerToggle" aria-label="Open menu">
+          <i data-lucide="menu"></i>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Mobile Drawer -->
+  <div class="nav-drawer" id="navDrawer" aria-hidden="true">
+    <div class="drawer-header">
+      <a href="/" class="navbar-logo">
+        <span class="logo-mark">Img</span><span class="logo-accent">ify</span>
+      </a>
+      <button class="btn-icon" id="navDrawerClose" aria-label="Close menu">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+    <div class="drawer-links">
+      <a href="/" class="drawer-link">Upload</a>
+      <a href="/dashboard.html" class="drawer-link">Dashboard</a>
+      <a href="/donate.html" class="drawer-link">Donate</a>
+    </div>
+  </div>
+  <div class="nav-overlay" id="navOverlay"></div>
+
+  <!-- ── MAIN ── -->
+  <main class="expired-main" id="mainContent" role="main" aria-label="Expired image" aria-busy="true">
+
+    <!-- Skeleton loader -->
+    <div class="skeleton-container" id="skeletonState">
+      <div class="skeleton-thumb"></div>
+      <div class="skeleton-line w-60"></div>
+      <div class="skeleton-line w-40"></div>
+      <div class="skeleton-line w-50"></div>
+    </div>
+
+    <!-- Expired state -->
+    <div id="expiredState" style="display:none; width:100%; flex-direction:column; align-items:center;">
+      <div id="thumbWrapper"></div>
+      <div class="expired-card">
+        <div class="expired-badge">
+          <i data-lucide="clock"></i> Expired
+        </div>
+        <h1 class="expired-title">This Image Has Expired</h1>
+        <p class="expired-subtitle" id="expiryLine">This image is no longer available.</p>
+        <div class="expired-meta" id="metaChips"></div>
+        <div class="expired-actions">
+          <a href="/" class="btn-primary-expired">
+            <i data-lucide="upload-cloud"></i> Upload a New Image
+          </a>
+          <a href="/dashboard.html" class="btn-secondary-expired">
+            <i data-lucide="layout-dashboard"></i> Go to Dashboard
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Not found state -->
+    <div id="notFoundState" style="display:none;">
+      <div class="not-found-card">
+        <div class="not-found-icon">
+          <i data-lucide="file-x-2"></i>
+        </div>
+        <h1 class="not-found-title">Image Not Found</h1>
+        <p class="not-found-sub">This image doesn't exist or has been removed.</p>
+        <div style="display:flex;flex-direction:column;gap:10px;width:100%;">
+          <a href="/" class="btn-primary-expired">
+            <i data-lucide="upload-cloud"></i> Upload a New Image
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Ad Slot -->
+  <div class="ad-section">
+    <div id="ad-content"></div>
+  </div>
+
+  <!-- ── FOOTER ── -->
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <a href="/" class="navbar-logo">
+          <span class="logo-mark">Img</span><span class="logo-accent">ify</span>
+        </a>
+        <p class="footer-tagline">Fast, free image hosting.</p>
+      </div>
+      <div class="footer-links">
+        <a href="/" class="footer-link">Upload</a>
+        <a href="/dashboard.html" class="footer-link">Dashboard</a>
+        <a href="/donate.html" class="footer-link">Donate</a>
+        <a href="/404.html" class="footer-link">404</a>
+      </div>
+      <p class="footer-copy">&copy; <span id="footerYear"></span> Imgify. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <!-- ── MODULE SCRIPT ── -->
+  <script type="module">
+    import { db } from '/js/firebase-init.js';
+    import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+    import { initAds } from '/js/ads-manager.js';
+
+    const mainEl = document.getElementById('mainContent');
+    const skeletonEl = document.getElementById('skeletonState');
+    const expiredEl = document.getElementById('expiredState');
+    const notFoundEl = document.getElementById('notFoundState');
+
+    function showState(state) {
+      skeletonEl.style.display = 'none';
+      expiredEl.style.display = 'none';
+      notFoundEl.style.display = 'none';
+      mainEl.setAttribute('aria-busy', 'false');
+
+      if (state === 'expired') expiredEl.style.display = 'flex';
+      if (state === 'notfound') notFoundEl.style.display = 'flex';
+    }
+
+    function formatBytes(bytes) {
+      if (!bytes || bytes === 0) return null;
+      const units = ['B', 'KB', 'MB', 'GB'];
+      let i = 0;
+      let val = bytes;
+      while (val >= 1024 && i < units.length - 1) { val /= 1024; i++; }
+      return `${val.toFixed(val < 10 && i > 0 ? 1 : 0)} ${units[i]}`;
+    }
+
+    function formatExpiry(ts) {
+      if (!ts) return null;
+      const d = ts.toDate ? ts.toDate() : new Date(ts);
+      return d.toLocaleString('en-US', {
+        month: 'long', day: 'numeric', year: 'numeric',
+        hour: 'numeric', minute: '2-digit', hour12: true
+      });
+    }
+
+    function buildThumb(thumbUrl) {
+      const wrapper = document.getElementById('thumbWrapper');
+      if (thumbUrl) {
+        wrapper.innerHTML = `
+          <div class="thumb-wrapper">
+            <img class="thumb-img" src="${thumbUrl}" alt="" aria-hidden="true" loading="lazy">
+            <div class="thumb-overlay">
+              <i data-lucide="clock" style="color:#fff;width:32px;height:32px;opacity:0.9;"></i>
+            </div>
+          </div>`;
+      } else {
+        wrapper.innerHTML = `
+          <div class="thumb-icon-placeholder">
+            <i data-lucide="image-off" style="width:40px;height:40px;"></i>
+            <span>No preview</span>
+          </div>`;
+      }
+    }
+
+    function buildMeta(data) {
+      const chips =[];
+
+      if (data.fileName) {
+        chips.push(`
+          <div class="meta-chip">
+            <i data-lucide="file-image"></i>
+            <span class="chip-value">${data.fileName}</span>
+          </div>`);
+      }
+
+      const sizeStr = formatBytes(data.size || data.fileSize);
+      if (sizeStr) {
+        chips.push(`
+          <div class="meta-chip">
+            <i data-lucide="hard-drive"></i>
+            <span class="chip-value">${sizeStr}</span>
+          </div>`);
+      }
+
+      document.getElementById('metaChips').innerHTML = chips.join('');
+    }
+
+    async function init() {
+      // Logic to fetch ID from query param OR path for Vercel/Firebase rewrites
+      const params = new URLSearchParams(window.location.search);
+      let id = params.get('id');
+      
+      if (!id) {
+        const pathParts = window.location.pathname.split('/').filter(Boolean);
+        if (pathParts.length > 0 && pathParts[0] === 'expired') {
+          id = pathParts[pathParts.length - 1];
+        }
+      }
+
+      if (!id || id === 'expired.html' || id === 'expired') {
+        buildThumb(null);
+        document.getElementById('expiryLine').textContent = 'This image is no longer available.';
+        showState('expired');
+        initAds();
+        window.lucide && lucide.createIcons();
+        return;
+      }
+
+      try {
+        const snap = await getDoc(doc(db, 'uploads', id));
+
+        if (!snap.exists() || snap.data().deleted === true) {
+          showState('notfound');
+          initAds();
+          window.lucide && lucide.createIcons();
+          return;
+        }
+
+        const data = snap.data();
+
+        buildThumb(data.thumbUrl || null);
+        buildMeta(data);
+
+        const expiryFormatted = formatExpiry(data.expiresAt);
+        if (expiryFormatted) {
+          document.getElementById('expiryLine').textContent = \`Expired on \${expiryFormatted}\`;
+        } else {
+          document.getElementById('expiryLine').textContent = 'This image is no longer available.';
+        }
+
+        showState('expired');
+      } catch (err) {
+        console.error('Firestore error:', err);
+        showState('notfound');
+      }
+
+      if (window.lucide) lucide.createIcons();
+      initAds();
+    }
+
+    init();
+  </script>
+
+  <!-- Non-module: theme toggle + drawer + footer year -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      if (window.lucide) lucide.createIcons();
+      
+      document.getElementById('footerYear').textContent = new Date().getFullYear();
+
+      const themeToggle = document.getElementById('themeToggle');
+      if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+          const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+          const next = isDark ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', next);
+          localStorage.setItem('imgify-theme', next);
+        });
+      }
+
+      const drawer = document.getElementById('navDrawer');
+      const overlay = document.getElementById('navOverlay');
+      const drawerToggle = document.getElementById('navDrawerToggle');
+      const drawerClose = document.getElementById('navDrawerClose');
+
+      function openDrawer() {
+        drawer.classList.add('open');
+        overlay.classList.add('visible');
+        drawer.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeDrawer() {
+        drawer.classList.remove('open');
+        overlay.classList.remove('visible');
+        drawer.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+      }
+
+      if (drawerToggle) drawerToggle.addEventListener('click', openDrawer);
+      if (drawerClose) drawerClose.addEventListener('click', closeDrawer);
+      if (overlay) overlay.addEventListener('click', closeDrawer);
+    });
+  </script>
+
+</body>
+</html>

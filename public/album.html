@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>View Album — Imgify</title>
+
+  <!-- OG / Social Meta -->
+  <meta property="og:title" content="View Album — Imgify" />
+  <meta property="og:description" content="Browse this image album on Imgify — fast, free image hosting." />
+  <meta property="og:image" content="/assets/og-default.jpg" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <!-- Favicon -->
+  <link rel="icon" href="/assets/favicon.ico" type="image/x-icon" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+  <!-- CSS (order matters) -->
+  <link rel="stylesheet" href="./css/global.css" />
+  <link rel="stylesheet" href="./css/layout.css" />
+  <link rel="stylesheet" href="./css/components.css" />
+  <link rel="stylesheet" href="./css/pages.css" />
+
+  <!-- Theme: MUST run before render to prevent flash -->
+  <script type="module" src="./js/theme.js"></script>
+
+  <style>
+    /* ── Album-specific scoped styles ── */
+
+    /* Cover hero */
+    .album-cover-wrap {
+      width: 100%;
+      max-height: 320px;
+      overflow: hidden;
+      border-radius: 12px;
+      background: var(--bg-tertiary);
+      margin-bottom: 28px;
+      position: relative;
+    }
+    .album-cover-wrap img {
+      width: 100%;
+      height: 320px;
+      object-fit: cover;
+      display: block;
+      transition: opacity 0.3s;
+    }
+    .album-cover-wrap.no-cover {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 160px;
+      border: 2px dashed var(--border);
+    }
+    .album-cover-wrap.no-cover .cover-placeholder-icon {
+      color: var(--text-hint);
+    }
+
+    /* Album header */
+    .album-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 36px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--text-primary);
+      margin-bottom: 10px;
+      line-height: 1.2;
+    }
+    @media (max-width: 768px) {
+      .album-title { font-size: 26px; }
+    }
+
+    .album-desc {
+      font-size: 15px;
+      color: var(--text-muted);
+      line-height: 1.65;
+      margin-bottom: 16px;
+    }
+    .album-desc[hidden] { display: none; }
+
+    .album-meta-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 28px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .album-meta-row .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .album-meta-row .meta-item i {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+
+    /* Privacy badge */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 3px 9px;
+      border-radius: 20px;
+    }
+    .badge-public   { background: var(--success-light); color: var(--success); }
+    .badge-unlisted { background: var(--warning-light); color: var(--warning); }
+    .badge-private  { background: var(--danger-light);  color: var(--danger);  }
+
+    /* ── Action Bar ── */
+    .album-action-bar {
+      display: flex;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 20px 24px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 32px;
+    }
+
+    /* ZIP button */
+    #btn-zip-download {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      flex-shrink: 0;
+    }
+    #btn-zip-download.loading {
+      opacity: 0.7;
+      pointer-events: none;
+      cursor: not-allowed;
+    }
+
+    /* Share URL row */
+    .share-url-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      min-width: 220px;
+    }
+    .share-url-group input {
+      flex: 1;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-width: 0;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .share-url-group input:focus {
+      border-color: var(--accent);
+    }
+    .share-url-group .btn-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg-primary);
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+      flex-shrink: 0;
+    }
+    .share-url-group .btn-icon:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: var(--accent-light);
+    }
+
+    /* QR toggle + panel */
+    #btn-show-qr {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      padding: 8px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg-primary);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+      flex-shrink: 0;
+    }
+    #btn-show-qr:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: var(--accent-light);
+    }
+
+    #album-qr-panel {
+      width: 100%;
+      margin-top: 12px;
+      padding: 20px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      align-items: flex-start;
+    }
+    #album-qr-panel[hidden] { display: none; }
+
+    #album-qr-canvas-wrap {
+      width: 160px;
+      height: 160px;
+      flex-shrink: 0;
+      background: #fff;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    #album-qr-canvas-wrap canvas {
+      display: block;
+    }
+
+    .qr-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+      min-width: 160px;
+    }
+    .qr-controls label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+      display: block;
+    }
+    .qr-controls .ctrl-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .qr-controls select,
+    .qr-controls input[type="color"] {
+      height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-size: 13px;
+      padding: 0 8px;
+      outline: none;
+      cursor: pointer;
+    }
+    .qr-controls input[type="color"] {
+      width: 40px;
+      padding: 2px 4px;
+    }
+    #btn-download-qr {
+      margin-top: 6px;
+    }
+
+    /* ── Image Grid ── */
+    .album-section-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 18px;
+      letter-spacing: -0.2px;
+    }
+
+    #album-image-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      margin-bottom: 32px;
+    }
+    @media (min-width: 600px) {
+      #album-image-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (min-width: 1024px) {
+      #album-image-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+
+    .album-img-card {
+      position: relative;
+      border-radius: 10px;
+      overflow: hidden;
+      background: var(--bg-tertiary);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      aspect-ratio: 1 / 1;
+      cursor: pointer;
+    }
+    .album-img-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.3s ease;
+    }
+    .album-img-card:hover img {
+      transform: scale(1.04);
+    }
+    .album-img-card .card-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 55%);
+      opacity: 0;
+      transition: opacity 0.25s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 10px;
+    }
+    .album-img-card:hover .card-overlay {
+      opacity: 1;
+    }
+    .card-overlay-filename {
+      font-size: 11px;
+      font-weight: 500;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 4px;
+    }
+    .card-overlay-date {
+      font-size: 10px;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 6px;
+    }
+    .card-overlay-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #fff;
+      text-decoration: none;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 6px;
+      padding: 4px 8px;
+      width: fit-content;
+      backdrop-filter: blur(4px);
+      transition: background 0.15s;
+    }
+    .card-overlay-link:hover {
+      background: rgba(255,255,255,0.28);
+    }
+
+    /* Empty state */
+    .album-empty-state {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 64px 24px;
+      color: var(--text-hint);
+      text-align: center;
+      gap: 12px;
+    }
+    .album-empty-state i {
+      width: 48px;
+      height: 48px;
+      opacity: 0.35;
+    }
+    .album-empty-state p {
+      font-size: 14px;
+    }
+
+    /* ── Pagination ── */
+    #album-pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-bottom: 40px;
+      flex-wrap: wrap;
+    }
+    #album-pagination[hidden] { display: none; }
+    .page-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 36px;
+      height: 36px;
+      padding: 0 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg-primary);
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: var(--font-body);
+    }
+    .page-btn:hover:not(:disabled) {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-light);
+    }
+    .page-btn.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .page-btn:disabled {
+      opacity: 0.38;
+      cursor: not-allowed;
+    }
+
+    /* ── Private screen ── */
+    #album-private {
+      min-height: 60vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+    #album-private[hidden] { display: none; }
+    .private-card {
+      text-align: center;
+      max-width: 400px;
+      padding: 48px 36px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+    }
+    .private-card .lock-icon-wrap {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 24px;
+      border-radius: 50%;
+      background: var(--danger-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .private-card .lock-icon-wrap i {
+      width: 32px;
+      height: 32px;
+      color: var(--danger);
+    }
+    .private-card h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 10px;
+    }
+    .private-card p {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    /* ── Loader ── */
+    #page-loader {
+      min-height: 60vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+    }
+    #page-loader[hidden] { display: none; }
+    .page-spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loader-text {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    /* ── Album view content wrapper ── */
+    #album-view-content[hidden] { display: none; }
+  </style>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════
+       GLOBAL NAVBAR
+  ════════════════════════════════════════════ -->
+  <header class="navbar" role="banner">
+    <div class="navbar-inner">
+      <a href="/" class="navbar-logo" aria-label="Imgify Home">
+        <img id="nav-logo-img" src="/assets/logo.svg" alt="Imgify" class="nav-logo-img" />
+        <span class="nav-logo-text">Imgify</span>
+      </a>
+
+      <nav class="navbar-links" aria-label="Primary navigation">
+        <a href="/" class="nav-link">Home</a>
+        <a href="/dashboard.html" class="nav-link">Dashboard</a>
+        <a href="/donate.html" class="nav-link">Donate</a>
+      </nav>
+
+      <div class="navbar-actions">
+        <button
+          id="theme-toggle"
+          class="btn-icon"
+          aria-label="Toggle dark/light theme"
+          title="Toggle theme"
+        >
+          <i data-lucide="sun" class="icon-sun"></i>
+          <i data-lucide="moon" class="icon-moon"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════
+       PAGE LOADING STATE
+  ════════════════════════════════════════════ -->
+  <main id="main-content">
+    <div id="page-loader" role="status" aria-live="polite" aria-label="Loading album">
+      <div class="page-spinner"></div>
+      <span class="loader-text">Loading album…</span>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         PRIVATE ALBUM SCREEN
+    ════════════════════════════════════════════ -->
+    <div
+      id="album-private"
+      hidden
+      role="alert"
+      aria-label="This album is private"
+    >
+      <div class="private-card">
+        <div class="lock-icon-wrap">
+          <i data-lucide="lock"></i>
+        </div>
+        <h2>This album is private</h2>
+        <p>The owner hasn't made this album public.</p>
+        <a href="/" class="btn btn-primary">
+          <i data-lucide="home"></i>
+          Back to Home
+        </a>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         ALBUM VIEW CONTENT
+    ════════════════════════════════════════════ -->
+    <div id="album-view-content" hidden>
+      <div class="page-container" style="max-width: 1100px; margin: 0 auto; padding: 32px 20px 0;">
+
+        <!-- 4a. Album Header -->
+        <section class="album-header" aria-label="Album information">
+
+          <!-- Cover image -->
+          <div class="album-cover-wrap" id="album-cover-wrap">
+            <img
+              id="album-cover"
+              src=""
+              alt="Album cover"
+              loading="lazy"
+            />
+          </div>
+
+          <!-- Album name -->
+          <h1 id="album-name" class="album-title"></h1>
+
+          <!-- Description (hidden if empty) -->
+          <p id="album-description" class="album-desc" hidden></p>
+
+          <!-- Meta row -->
+          <div class="album-meta-row" role="list">
+            <div class="meta-item" role="listitem">
+              <i data-lucide="images"></i>
+              <span id="album-image-count">0 images</span>
+            </div>
+            <div class="meta-item" role="listitem">
+              <i data-lucide="calendar"></i>
+              <span id="album-date"></span>
+            </div>
+            <div class="meta-item" role="listitem">
+              <span id="album-privacy-badge" class="badge badge-public"></span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 4b. Action Bar -->
+        <div class="album-action-bar" role="region" aria-label="Album actions">
+
+          <!-- ZIP Download -->
+          <button
+            id="btn-zip-download"
+            class="btn btn-primary"
+            aria-label="Download all images as ZIP"
+            type="button"
+          >
+            <i data-lucide="archive"></i>
+            Download All as ZIP
+          </button>
+
+          <!-- Share URL -->
+          <div class="share-url-group" role="group" aria-label="Share album link">
+            <input
+              type="text"
+              id="album-share-url"
+              readonly
+              aria-label="Album share URL"
+              title="Copy this link to share the album"
+            />
+            <button
+              class="btn-icon"
+              id="btn-copy-url"
+              aria-label="Copy album URL to clipboard"
+              title="Copy link"
+              type="button"
+            >
+              <i data-lucide="copy"></i>
+            </button>
+          </div>
+
+          <!-- QR Toggle -->
+          <button
+            id="btn-show-qr"
+            aria-expanded="false"
+            aria-controls="album-qr-panel"
+            type="button"
+          >
+            <i data-lucide="qr-code"></i>
+            Show QR
+          </button>
+
+          <!-- QR Panel -->
+          <div
+            id="album-qr-panel"
+            hidden
+            role="region"
+            aria-label="QR code panel"
+          >
+            <div id="album-qr-canvas-wrap" aria-label="QR code preview">
+              <!-- QRCode.js renders canvas here -->
+            </div>
+
+            <div class="qr-controls">
+              <div>
+                <label for="qr-size-select">Size</label>
+                <div class="ctrl-row">
+                  <select id="qr-size-select" aria-label="QR code size">
+                    <option value="128">Small (128px)</option>
+                    <option value="160" selected>Medium (160px)</option>
+                    <option value="256">Large (256px)</option>
+                    <option value="320">XL (320px)</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label>Colors</label>
+                <div class="ctrl-row">
+                  <input
+                    type="color"
+                    id="qr-dark-color"
+                    value="#000000"
+                    aria-label="QR code dark color"
+                    title="Dark color"
+                  />
+                  <input
+                    type="color"
+                    id="qr-light-color"
+                    value="#ffffff"
+                    aria-label="QR code light color"
+                    title="Light color"
+                  />
+                </div>
+              </div>
+              <button
+                id="btn-download-qr"
+                class="btn btn-secondary"
+                type="button"
+                aria-label="Download QR code as PNG"
+              >
+                <i data-lucide="download"></i>
+                Download QR
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4c. Image Grid -->
+        <section aria-label="Album images">
+          <h2 class="album-section-title">Images</h2>
+          <div
+            id="album-image-grid"
+            role="list"
+            aria-label="Album image grid"
+          >
+            <!-- Populated by album-view.js -->
+            <!-- Empty state injected here if imageIds.length === 0 -->
+          </div>
+        </section>
+
+        <!-- 4d. Pagination -->
+        <nav
+          id="album-pagination"
+          hidden
+          aria-label="Album image pagination"
+        >
+          <!-- Populated by album-view.js -->
+        </nav>
+
+      </div><!-- /.page-container -->
+    </div><!-- /#album-view-content -->
+
+    <!-- Ad slot -->
+    <div id="ad-content" aria-hidden="true"></div>
+
+  </main>
+
+  <!-- ═══════════════════════════════════════════
+       FOOTER
+  ════════════════════════════════════════════ -->
+  <footer class="site-footer" role="contentinfo">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <a href="/" class="footer-logo-link" aria-label="Imgify Home">
+          <img src="/assets/logo.svg" alt="Imgify" class="footer-logo-img" />
+          <span class="footer-logo-text">Imgify</span>
+        </a>
+        <p class="footer-tagline">Fast, free image hosting. No account required.</p>
+      </div>
+
+      <nav class="footer-links" aria-label="Footer navigation">
+        <a href="/" class="footer-link">Home</a>
+        <a href="/dashboard.html" class="footer-link">Dashboard</a>
+        <a href="/donate.html" class="footer-link footer-donate-link" hidden>Support Us ☕</a>
+        <a href="/404.html" class="footer-link">404</a>
+      </nav>
+
+      <p class="footer-copy">
+        &copy; <span id="footer-year"></span> Imgify · imgify.site
+      </p>
+    </div>
+  </footer>
+
+  <!-- ═══════════════════════════════════════════
+       SCRIPTS (module type)
+  ════════════════════════════════════════════ -->
+  <script type="module">
+    import { initAds } from './js/ads-manager.js';
+    import { initAlbumView } from './js/album-view.js';
+    initAds();
+    lucide.createIcons();
+    initAlbumView();
+
+    // Footer year
+    document.getElementById('footer-year').textContent = new Date().getFullYear();
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>View Image — Imgify</title>
+
+  <!-- Favicon -->
+  <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <!-- Open Graph Meta (updated dynamically by image-view.js) -->
+  <meta property="og:title" content="View Image — Imgify" />
+  <meta property="og:description" content="View and share this image on Imgify." />
+  <meta property="og:image" content="" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <!-- Theme (MUST run before render — NOT a module) -->
+  <script type="module" src="/js/theme.js"></script>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/css/global.css" />
+  <link rel="stylesheet" href="/css/layout.css" />
+  <link rel="stylesheet" href="/css/components.css" />
+  <link rel="stylesheet" href="/css/pages.css" />
+
+  <style>
+    /* ── PAGE LOADER ── */
+    #page-loader {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      gap: 16px;
+    }
+    #page-loader .loader-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: imgify-spin 0.75s linear infinite;
+    }
+    #page-loader .loader-text {
+      font-size: 14px;
+      color: var(--text-muted);
+      font-family: var(--font-body);
+    }
+    @keyframes imgify-spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ── PASSWORD OVERLAY ── */
+    #password-overlay {
+      position: fixed;
+      inset: 0;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: rgba(0, 0, 0, 0.55);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .pw-card {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-strong);
+      border-radius: 16px;
+      padding: 40px 36px;
+      width: 100%;
+      max-width: 420px;
+      text-align: center;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.18);
+      animation: pw-card-in 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    @keyframes pw-card-in {
+      from { opacity: 0; transform: scale(0.92) translateY(16px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .pw-card .pw-icon {
+      width: 56px;
+      height: 56px;
+      background: var(--accent-light);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      color: var(--accent);
+    }
+    .pw-card h2 {
+      font-family: var(--font-display);
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+      letter-spacing: -0.3px;
+    }
+    .pw-card > p {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+    #pw-input {
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 15px;
+      font-family: var(--font-body);
+      background: var(--bg-secondary);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-primary);
+      outline: none;
+      margin-bottom: 12px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    #pw-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-light);
+    }
+    #pw-input.pw-shake {
+      animation: pw-shake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+      border-color: var(--danger);
+    }
+    @keyframes pw-shake {
+      10%, 90% { transform: translateX(-3px); }
+      20%, 80% { transform: translateX(5px); }
+      30%, 50%, 70% { transform: translateX(-5px); }
+      40%, 60% { transform: translateX(5px); }
+    }
+    #pw-submit {
+      width: 100%;
+      margin-bottom: 12px;
+    }
+    .pw-error-msg {
+      font-size: 13px;
+      color: var(--danger);
+      font-weight: 500;
+      margin-top: 4px;
+    }
+    .pw-lockout-msg {
+      font-size: 13px;
+      color: var(--warning);
+      font-weight: 500;
+    }
+
+    /* ── IMAGE VIEW CONTENT ── */
+    #image-view-content {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 40px 20px 64px;
+    }
+
+    /* ── IMAGE HERO ── */
+    .image-hero {
+      margin: 0 0 32px;
+      border-radius: 16px;
+      overflow: hidden;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 280px;
+    }
+    .hero-img {
+      display: block;
+      width: 100%;
+      max-height: 70vh;
+      object-fit: contain;
+    }
+
+    /* ── META CARD ── */
+    .image-meta-card {
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px 28px;
+      margin-bottom: 24px;
+    }
+    .img-view-title {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.2px;
+      margin-bottom: 12px;
+    }
+    .img-meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .img-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .img-meta-item i {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 3px 9px;
+      border-radius: 20px;
+    }
+    .badge-public {
+      background: var(--success-light);
+      color: var(--success);
+    }
+    .badge-unlisted {
+      background: var(--warning-light);
+      color: var(--warning);
+    }
+    .img-description {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.65;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── URL COPY PANEL ── */
+    .url-panel {
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+    }
+    .url-panel h3 {
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 16px;
+      letter-spacing: -0.1px;
+    }
+    .url-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .url-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+    .url-row-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      min-width: 96px;
+      flex-shrink: 0;
+    }
+    .url-value {
+      flex: 1;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-secondary);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 7px 10px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+      user-select: all;
+    }
+    .btn-copy {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .btn-copy:hover {
+      background: var(--accent-light);
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+    .btn-copy.copied {
+      background: var(--success-light);
+      color: var(--success);
+      border-color: var(--success);
+    }
+    .btn-copy i { width: 15px; height: 15px; }
+
+    /* ── OG PREVIEW PANEL ── */
+    .og-preview-panel {
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+    }
+    .og-preview-panel h3 {
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 16px;
+      letter-spacing: -0.1px;
+    }
+    .og-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .og-tab {
+      padding: 6px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: var(--font-body);
+      border-radius: 20px;
+      border: 1.5px solid var(--border);
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .og-tab:hover {
+      border-color: var(--border-strong);
+      color: var(--text-primary);
+    }
+    .og-tab.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    #og-preview-area {
+      border-radius: 10px;
+      overflow: hidden;
+      background: var(--bg-secondary);
+      min-height: 80px;
+    }
+
+    /* ── QR PANEL ── */
+    .qr-panel {
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+    }
+    .qr-panel h3 {
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 16px;
+      letter-spacing: -0.1px;
+    }
+    #qr-canvas-container {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 16px;
+      min-height: 200px;
+      align-items: center;
+    }
+    #qr-canvas-container canvas,
+    #qr-canvas-container img {
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .qr-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+    }
+    .qr-color-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .qr-color-group label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .qr-color-group input[type="color"] {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      border: 1.5px solid var(--border);
+      cursor: pointer;
+      padding: 2px;
+      background: var(--bg-secondary);
+    }
+    .qr-size-group {
+      display: flex;
+      gap: 4px;
+    }
+    .qr-size-btn {
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: var(--font-body);
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .qr-size-btn.active,
+    .qr-size-btn:hover {
+      background: var(--accent-light);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ── ACTION ROW ── */
+    .action-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    /* ── REPORT MODAL ── */
+    #report-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 300;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .report-card {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-strong);
+      border-radius: 16px;
+      padding: 32px 28px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.16);
+      animation: pw-card-in 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+    .report-card h3 {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 20px;
+    }
+    .report-card label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+    #report-reason,
+    #report-note {
+      width: 100%;
+      padding: 11px 14px;
+      font-size: 14px;
+      font-family: var(--font-body);
+      background: var(--bg-secondary);
+      border: 1.5px solid var(--border);
+      border-radius: 9px;
+      color: var(--text-primary);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      margin-bottom: 14px;
+    }
+    #report-reason:focus,
+    #report-note:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-light);
+    }
+    #report-note {
+      resize: vertical;
+      min-height: 90px;
+    }
+    .report-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 4px;
+    }
+    .report-actions .btn {
+      flex: 1;
+    }
+
+    /* ── AD SLOT ── */
+    #ad-content {
+      margin: 0 auto 40px;
+      max-width: 880px;
+      padding: 0 20px;
+      text-align: center;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 600px) {
+      #image-view-content {
+        padding: 24px 12px 48px;
+      }
+      .image-meta-card {
+        padding: 18px 16px;
+      }
+      .url-panel,
+      .og-preview-panel,
+      .qr-panel {
+        padding: 16px;
+      }
+      .url-row {
+        flex-wrap: wrap;
+      }
+      .url-row-label {
+        min-width: 100%;
+        margin-bottom: 4px;
+      }
+      .url-value {
+        flex: 1;
+      }
+      .pw-card {
+        padding: 28px 20px;
+      }
+      .action-row {
+        flex-direction: column;
+      }
+      .action-row .btn {
+        width: 100%;
+        justify-content: center;
+      }
+      .qr-controls {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+
+    @media (min-width: 768px) {
+      #image-view-content {
+        padding: 48px 32px 72px;
+      }
+      .img-view-title {
+        font-size: 26px;
+      }
+    }
+
+    @media (min-width: 1280px) {
+      #image-view-content {
+        padding: 56px 0 80px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ═══════════════════════════════════════════════
+       GLOBAL NAVBAR
+       Same structure as index.html / dashboard.html
+       No nav link is marked active on this public page
+  ═══════════════════════════════════════════════ -->
+  <header class="navbar" role="banner">
+    <div class="navbar-inner">
+      <a href="/" class="navbar-brand" aria-label="Imgify home">
+        <span class="brand-icon" aria-hidden="true">
+          <i data-lucide="image"></i>
+        </span>
+        <span class="brand-name">Imgify</span>
+      </a>
+
+      <nav class="navbar-nav" aria-label="Main navigation">
+        <a href="/" class="nav-link">Home</a>
+        <a href="/dashboard.html" class="nav-link">Dashboard</a>
+      </nav>
+
+      <div class="navbar-actions">
+        <button class="btn-icon theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
+          <i data-lucide="sun" class="icon-light"></i>
+          <i data-lucide="moon" class="icon-dark"></i>
+        </button>
+        <a href="/" class="btn btn-primary btn-sm">
+          <i data-lucide="upload"></i>
+          Upload
+        </a>
+      </div>
+
+      <button class="navbar-hamburger" id="navbar-hamburger" aria-label="Open menu" aria-expanded="false">
+        <i data-lucide="menu"></i>
+      </button>
+    </div>
+
+    <!-- Mobile nav drawer -->
+    <div class="navbar-mobile-drawer" id="navbar-mobile-drawer" role="dialog" aria-label="Mobile navigation" aria-modal="true" hidden>
+      <a href="/" class="nav-link-mobile">Home</a>
+      <a href="/dashboard.html" class="nav-link-mobile">Dashboard</a>
+      <a href="/" class="btn btn-primary btn-sm nav-btn-mobile">
+        <i data-lucide="upload"></i>
+        Upload
+      </a>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════
+       PASSWORD OVERLAY
+       Hidden by default. image-view.js removes [hidden]
+       when doc.isPasswordProtected === true
+  ═══════════════════════════════════════════════ -->
+  <div id="password-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="pw-heading">
+    <div class="pw-card">
+      <div class="pw-icon" aria-hidden="true">
+        <i data-lucide="lock" style="width:24px;height:24px;"></i>
+      </div>
+      <h2 id="pw-heading">Password Protected</h2>
+      <p>Enter the password to view this image.</p>
+
+      <input
+        type="password"
+        id="pw-input"
+        placeholder="Enter password"
+        aria-label="Image password"
+        autocomplete="current-password"
+        spellcheck="false"
+      />
+      <button id="pw-submit" class="btn btn-primary" aria-label="Unlock image">
+        <i data-lucide="unlock"></i>
+        Unlock Image
+      </button>
+
+      <p id="pw-error" class="pw-error-msg" hidden aria-live="assertive">
+        Incorrect password.
+      </p>
+      <p id="pw-lockout" class="pw-lockout-msg" hidden aria-live="assertive">
+        Too many attempts. Try again in <span id="pw-lockout-timer">30</span>s.
+      </p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       PAGE LOADER
+       Visible by default. image-view.js hides after load.
+  ═══════════════════════════════════════════════ -->
+  <div id="page-loader" role="status" aria-live="polite">
+    <div class="loader-spinner" aria-hidden="true"></div>
+    <p class="loader-text">Loading image…</p>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       IMAGE VIEW CONTENT
+       Hidden by default. image-view.js reveals after load.
+  ═══════════════════════════════════════════════ -->
+  <main id="image-view-content" hidden>
+
+    <!-- ── 4a. IMAGE HERO ── -->
+    <figure class="image-hero" aria-label="Image preview">
+      <img
+        id="hero-image"
+        src=""
+        alt=""
+        class="hero-img"
+        loading="eager"
+      />
+    </figure>
+
+    <!-- ── 4b. IMAGE METADATA CARD ── -->
+    <div class="image-meta-card">
+      <h1 id="img-title" class="img-view-title"></h1>
+
+      <div class="img-meta-row">
+        <span class="img-meta-item">
+          <i data-lucide="calendar" aria-hidden="true"></i>
+          <span id="img-date">—</span>
+        </span>
+        <span class="img-meta-item">
+          <i data-lucide="hard-drive" aria-hidden="true"></i>
+          <span id="img-size">—</span>
+        </span>
+        <span class="img-meta-item">
+          <i data-lucide="eye" aria-hidden="true"></i>
+          <span id="img-views">—</span> views
+        </span>
+        <span id="img-privacy-badge" class="badge" aria-label="Image privacy"></span>
+      </div>
+
+      <p id="img-description" class="img-description" hidden></p>
+    </div>
+
+    <!-- ── 4c. COPY URL FORMATS PANEL ── -->
+    <div class="url-panel" role="region" aria-label="Share URLs">
+      <h3>Share Links</h3>
+
+      <!-- Direct Link -->
+      <div class="url-row">
+        <span class="url-row-label">Direct</span>
+        <code id="url-direct" class="url-value" aria-label="Direct link URL"></code>
+        <button class="btn-copy" id="copy-direct" aria-label="Copy direct URL" title="Copy direct link">
+          <i data-lucide="copy"></i>
+        </button>
+      </div>
+
+      <!-- HTML Embed -->
+      <div class="url-row">
+        <span class="url-row-label">HTML</span>
+        <code id="url-html" class="url-value" aria-label="HTML embed code"></code>
+        <button class="btn-copy" id="copy-html" aria-label="Copy HTML embed code" title="Copy HTML embed">
+          <i data-lucide="copy"></i>
+        </button>
+      </div>
+
+      <!-- Markdown -->
+      <div class="url-row">
+        <span class="url-row-label">Markdown</span>
+        <code id="url-markdown" class="url-value" aria-label="Markdown embed code"></code>
+        <button class="btn-copy" id="copy-markdown" aria-label="Copy Markdown embed code" title="Copy Markdown">
+          <i data-lucide="copy"></i>
+        </button>
+      </div>
+
+      <!-- BBCode -->
+      <div class="url-row">
+        <span class="url-row-label">BBCode</span>
+        <code id="url-bbcode" class="url-value" aria-label="BBCode embed code"></code>
+        <button class="btn-copy" id="copy-bbcode" aria-label="Copy BBCode embed code" title="Copy BBCode">
+          <i data-lucide="copy"></i>
+        </button>
+      </div>
+
+      <!-- Thumbnail URL -->
+      <div class="url-row">
+        <span class="url-row-label">Thumb</span>
+        <code id="url-thumb" class="url-value" aria-label="Thumbnail URL"></code>
+        <button class="btn-copy" id="copy-thumb" aria-label="Copy thumbnail URL" title="Copy thumbnail URL">
+          <i data-lucide="copy"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- ── 4d. OG PREVIEW CARD PANEL ── -->
+    <div class="og-preview-panel" role="region" aria-label="Social share preview">
+      <h3>Share Preview</h3>
+
+      <div class="og-tabs" role="tablist" aria-label="Social platform preview">
+        <button class="og-tab active" role="tab" aria-selected="true"  data-platform="whatsapp">WhatsApp</button>
+        <button class="og-tab"        role="tab" aria-selected="false" data-platform="twitter">Twitter</button>
+        <button class="og-tab"        role="tab" aria-selected="false" data-platform="facebook">Facebook</button>
+      </div>
+
+      <div id="og-preview-area" class="og-preview-area" role="tabpanel" aria-live="polite"></div>
+    </div>
+
+    <!-- ── 4e. QR CODE PANEL ── -->
+    <div class="qr-panel" role="region" aria-label="QR code generator">
+      <h3>QR Code</h3>
+
+      <div id="qr-canvas-container" aria-label="QR code canvas"></div>
+
+      <div class="qr-controls">
+        <div class="qr-color-group">
+          <label for="qr-fg">Color</label>
+          <input type="color" id="qr-fg" value="#000000" aria-label="QR code foreground color" />
+        </div>
+        <div class="qr-color-group">
+          <label for="qr-bg">Background</label>
+          <input type="color" id="qr-bg" value="#ffffff" aria-label="QR code background color" />
+        </div>
+
+        <div class="qr-size-group" role="group" aria-label="QR code size">
+          <button class="qr-size-btn" data-size="128" aria-pressed="false">S</button>
+          <button class="qr-size-btn active" data-size="200" aria-pressed="true">M</button>
+          <button class="qr-size-btn" data-size="300" aria-pressed="false">L</button>
+        </div>
+
+        <button class="btn btn-secondary" id="btn-download-qr" aria-label="Download QR code as PNG">
+          <i data-lucide="download"></i>
+          Download PNG
+        </button>
+      </div>
+    </div>
+
+    <!-- ── 4f. ACTION ROW ── -->
+    <div class="action-row" role="group" aria-label="Image actions">
+      <a
+        id="btn-download-img"
+        href="#"
+        download
+        class="btn btn-primary"
+        aria-label="Download original image"
+      >
+        <i data-lucide="download-cloud"></i>
+        Download Image
+      </a>
+
+      <a
+        id="btn-open-original"
+        href="#"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="btn btn-secondary"
+        aria-label="Open image in new tab"
+      >
+        <i data-lucide="external-link"></i>
+        Open Original
+      </a>
+
+      <button
+        id="btn-report"
+        class="btn btn-ghost btn-danger-ghost"
+        aria-label="Report this image for abuse"
+      >
+        <i data-lucide="flag"></i>
+        Report
+      </button>
+    </div>
+
+    <!-- ── 4g. REPORT MODAL ── -->
+    <div id="report-modal" hidden role="dialog" aria-modal="true" aria-labelledby="report-heading">
+      <div class="report-card">
+        <h3 id="report-heading">Report Image</h3>
+
+        <label for="report-reason">Reason</label>
+        <select id="report-reason" aria-label="Report reason">
+          <option value="">Select a reason…</option>
+          <option value="spam">Spam</option>
+          <option value="adult">Adult Content</option>
+          <option value="copyright">Copyright Infringement</option>
+          <option value="malware">Malware / Phishing</option>
+          <option value="other">Other</option>
+        </select>
+
+        <label for="report-note">Additional Details (optional)</label>
+        <textarea
+          id="report-note"
+          placeholder="Describe the issue in more detail…"
+          maxlength="500"
+          aria-label="Additional report details"
+          rows="3"
+        ></textarea>
+
+        <p
+          id="report-error"
+          style="font-size:13px;color:var(--danger);margin-bottom:12px;display:none;"
+          aria-live="assertive"
+        >Please select a reason before submitting.</p>
+
+        <div class="report-actions">
+          <button id="btn-report-submit" class="btn btn-danger" aria-label="Submit report">
+            <i data-lucide="send"></i>
+            Submit Report
+          </button>
+          <button id="btn-report-cancel" class="btn btn-secondary" aria-label="Cancel report">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ═══════════════════════════════════════════════
+       AD SLOT — between content and footer
+  ═══════════════════════════════════════════════ -->
+  <div id="ad-content"></div>
+
+  <!-- ═══════════════════════════════════════════════
+       GLOBAL FOOTER
+  ═══════════════════════════════════════════════ -->
+  <footer class="site-footer" role="contentinfo">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <a href="/" class="footer-logo" aria-label="Imgify home">
+          <i data-lucide="image" aria-hidden="true"></i>
+          Imgify
+        </a>
+        <p class="footer-tagline">Fast, free image hosting for everyone.</p>
+      </div>
+
+      <nav class="footer-nav" aria-label="Footer navigation">
+        <a href="/" class="footer-link">Home</a>
+        <a href="/dashboard.html" class="footer-link">Dashboard</a>
+        <a href="/donate.html" class="footer-link" id="footer-donate-link" hidden>Support Us ☕</a>
+      </nav>
+
+      <p class="footer-copy">&copy; <span id="footer-year"></span> Imgify. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <!-- ═══════════════════════════════════════════════
+       SCRIPTS
+  ═══════════════════════════════════════════════ -->
+  <script type="module">
+    import { initAds } from './js/ads-manager.js';
+    import { initImageView } from './js/image-view.js';
+
+    initAds();
+    lucide.createIcons();
+    initImageView();
+
+    /* Footer year */
+    const yearEl = document.getElementById('footer-year');
+    if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+    /* Navbar hamburger toggle */
+    const hamburger = document.getElementById('navbar-hamburger');
+    const drawer    = document.getElementById('navbar-mobile-drawer');
+    if (hamburger && drawer) {
+      hamburger.addEventListener('click', () => {
+        const isOpen = !drawer.hidden;
+        drawer.hidden = isOpen;
+        hamburger.setAttribute('aria-expanded', String(!isOpen));
+      });
+      /* Close drawer on outside click */
+      document.addEventListener('click', (e) => {
+        if (!drawer.hidden && !drawer.contains(e.target) && !hamburger.contains(e.target)) {
+          drawer.hidden = true;
+          hamburger.setAttribute('aria-expanded', 'false');
+        }
+      });
+    }
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,34 @@
+{
+  "version": 2,
+  "outputDirectory": "public",
+  "functions": {
+    "api/upload.js": {
+      "runtime": "nodejs20.x"
+    }
+  },
+  "rewrites": [
+    { "source": "/dashboard",        "destination": "/dashboard.html"       },
+    { "source": "/image/:id",        "destination": "/image.html"           },
+    { "source": "/album/:id",        "destination": "/album.html"           },
+    { "source": "/donate",           "destination": "/donate.html"          },
+    { "source": "/expired",          "destination": "/expired.html"         },
+    { "source": "/admin",            "destination": "/admin-index.html"     },
+    { "source": "/admin/login",      "destination": "/login.html"           },
+    { "source": "/admin/images",     "destination": "/images.html"          },
+    { "source": "/admin/albums",     "destination": "/albums.html"          },
+    { "source": "/admin/users",      "destination": "/users.html"           },
+    { "source": "/admin/reports",    "destination": "/reports.html"         },
+    { "source": "/admin/settings",   "destination": "/settings.html"        },
+    { "source": "/(.*)",             "destination": "/index.html"           }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin",  "value": "*"              },
+        { "key": "Access-Control-Allow-Methods", "value": "POST, OPTIONS"  },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type"   }
+      ]
+    }
+  ]
+}

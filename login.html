@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>Admin Login · Imgify</title>
+  <meta property="og:title" content="Admin Login · Imgify">
+
+  <!-- theme.js FIRST — prevents flash of wrong theme -->
+  <script type="module" src="../js/theme.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/global.css">
+  <link rel="stylesheet" href="../css/layout.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/pages.css">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+  <style>
+    /* ── PAGE SHELL ── */
+    .login-page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-secondary);
+      padding: 24px;
+      position: relative;
+    }
+
+    /* subtle grid bg */
+    .login-page::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 48px 48px;
+      opacity: 0.4;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── THEME TOGGLE ── */
+    .theme-btn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 100;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg-primary);
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+    }
+
+    .theme-btn:hover {
+      color: var(--text-primary);
+      border-color: var(--border-strong);
+    }
+
+    /* ── LOGIN CARD ── */
+    .login-card {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 400px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px 36px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+    }
+
+    /* ── LOGO ── */
+    .login-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+
+    .login-logo-mark {
+      width: 36px;
+      height: 36px;
+      background: var(--accent);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    .login-logo-text {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.3px;
+    }
+
+    /* ── HEADING ── */
+    .login-card h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.4px;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+
+    .login-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 32px;
+      line-height: 1.5;
+    }
+
+    /* ── FORM ── */
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+
+    .input-wrap {
+      position: relative;
+    }
+
+    .input-wrap input {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      outline: none;
+    }
+
+    .input-wrap input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-light);
+    }
+
+    .input-wrap input.has-toggle {
+      padding-right: 44px;
+    }
+
+    .pw-toggle {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.15s;
+    }
+
+    .pw-toggle:hover {
+      color: var(--text-primary);
+    }
+
+    /* ── SUBMIT BUTTON ── */
+    .btn-signin {
+      width: 100%;
+      padding: 11px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background 0.2s, opacity 0.2s;
+    }
+
+    .btn-signin:hover:not(:disabled) {
+      background: var(--accent-dark);
+    }
+
+    .btn-signin:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    .btn-signin .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+
+    .btn-signin.loading .spinner { display: block; }
+    .btn-signin.loading .btn-label { display: none; }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 13.5px;
+      color: var(--text-primary);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: 320px;
+      transform: translateX(calc(100% + 24px));
+      opacity: 0;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+
+    #toast.show {
+      transform: translateX(0);
+      opacity: 1;
+    }
+
+    #toast.toast-error { border-left: 3px solid var(--danger); }
+    #toast.toast-success { border-left: 3px solid var(--success); }
+
+    #toast .toast-icon { flex-shrink: 0; }
+    #toast.toast-error .toast-icon { color: var(--danger); }
+    #toast.toast-success .toast-icon { color: var(--success); }
+
+    /* mobile */
+    @media (max-width: 480px) {
+      .login-card { padding: 32px 24px; }
+      #toast { top: auto; bottom: 20px; right: 12px; left: 12px; max-width: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Theme toggle -->
+  <button class="theme-btn" id="themeToggle" aria-label="Toggle theme">
+    <i data-lucide="sun" width="18" height="18"></i>
+  </button>
+
+  <!-- Toast -->
+  <div id="toast" role="alert" aria-live="polite">
+    <span class="toast-icon" id="toastIcon"></span>
+    <span id="toastMsg"></span>
+  </div>
+
+  <!-- Main -->
+  <main class="login-page" role="main" aria-label="Admin login">
+    <div class="login-card">
+
+      <!-- Logo -->
+      <div class="login-logo" aria-label="Imgify">
+        <div class="login-logo-mark">
+          <i data-lucide="image" width="18" height="18"></i>
+        </div>
+        <span class="login-logo-text">Imgify</span>
+      </div>
+
+      <h1>Admin Login</h1>
+      <p class="login-subtitle">Restricted access — authorized personnel only</p>
+
+      <!-- Form -->
+      <div>
+        <div class="form-group">
+          <label for="emailInput">Email address</label>
+          <div class="input-wrap">
+            <input
+              type="email"
+              id="emailInput"
+              autocomplete="username"
+              aria-required="true"
+              placeholder="admin@imgify.site"
+            >
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="passwordInput">Password</label>
+          <div class="input-wrap">
+            <input
+              type="password"
+              id="passwordInput"
+              class="has-toggle"
+              autocomplete="current-password"
+              aria-required="true"
+              placeholder="••••••••"
+            >
+            <button class="pw-toggle" id="pwToggle" type="button" aria-label="Toggle password visibility">
+              <i data-lucide="eye" width="16" height="16" id="eyeIcon"></i>
+            </button>
+          </div>
+        </div>
+
+        <button class="btn-signin" id="signInBtn" aria-busy="false">
+          <span class="spinner"></span>
+          <span class="btn-label">Sign In</span>
+        </button>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Module: Auth logic -->
+  <script type="module">
+    import { auth, db } from '../js/firebase-init.js';
+    import {
+      signInWithEmailAndPassword,
+      setPersistence,
+      browserLocalPersistence,
+      onAuthStateChanged,
+      signOut
+    } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+    import { doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+    // ── TOAST ──
+    let toastTimer = null;
+    function showToast(msg, type = 'error') {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMsg');
+      const toastIcon = document.getElementById('toastIcon');
+
+      toast.className = `toast-${type} show`;
+      toastMsg.textContent = msg;
+      toastIcon.innerHTML = type === 'error'
+        ? '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+        : '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { toast.className = ''; }, 4000);
+    }
+
+    // ── ERROR MAP ──
+    function mapFirebaseError(code) {
+      const map = {
+        'auth/invalid-credential':    'Invalid email or password.',
+        'auth/user-not-found':        'No account found with this email.',
+        'auth/wrong-password':        'Incorrect password.',
+        'auth/too-many-requests':     'Too many attempts. Try again later.',
+        'auth/invalid-email':         'Invalid email address.',
+        'auth/network-request-failed':'Network error. Check your connection.',
+      };
+      return map[code] || 'Sign in failed. Please try again.';
+    }
+
+    // ── SET LOADING STATE ──
+    function setLoading(state) {
+      const btn = document.getElementById('signInBtn');
+      btn.disabled = state;
+      btn.setAttribute('aria-busy', String(state));
+      btn.classList.toggle('loading', state);
+    }
+
+    // ── ON AUTH STATE CHANGED — redirect if already logged-in admin ──
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return;
+      try {
+        const snap = await getDoc(doc(db, 'users', user.uid));
+        if (snap.exists() && snap.data().role === 'admin') {
+          window.location.href = '/admin';
+        }
+      } catch {
+        // not admin or doc missing — stay on login
+      }
+    });
+
+    // ── SIGN IN HANDLER ──
+    async function handleSignIn() {
+      const email    = document.getElementById('emailInput').value.trim();
+      const password = document.getElementById('passwordInput').value;
+
+      if (!email || !password) {
+        showToast('Please enter your email and password.');
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        await setPersistence(auth, browserLocalPersistence);
+        const cred = await signInWithEmailAndPassword(auth, email, password);
+        const uid  = cred.user.uid;
+
+        const snap = await getDoc(doc(db, 'users', uid));
+        if (snap.exists() && snap.data().role === 'admin') {
+          window.location.href = '/admin';
+        } else {
+          await signOut(auth);
+          showToast('Access denied. Admin only.');
+          setLoading(false);
+        }
+      } catch (err) {
+        showToast(mapFirebaseError(err.code));
+        setLoading(false);
+      }
+    }
+
+    // ── BUTTON CLICK ──
+    document.getElementById('signInBtn').addEventListener('click', handleSignIn);
+
+    // ── ENTER KEY ──
+    ['emailInput', 'passwordInput'].forEach(id => {
+      document.getElementById(id).addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleSignIn();
+      });
+    });
+
+    // ── PASSWORD TOGGLE ──
+    document.getElementById('pwToggle').addEventListener('click', () => {
+      const input   = document.getElementById('passwordInput');
+      const icon    = document.getElementById('eyeIcon');
+      const visible = input.type === 'text';
+      input.type = visible ? 'password' : 'text';
+      icon.setAttribute('data-lucide', visible ? 'eye' : 'eye-off');
+      lucide.createIcons();
+    });
+  </script>
+
+  <!-- Non-module: Lucide + theme toggle -->
+  <script>
+    lucide.createIcons();
+
+    const themeBtn = document.getElementById('themeToggle');
+
+    function updateThemeIcon() {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      themeBtn.innerHTML = isDark
+        ? '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>'
+        : '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+    }
+
+    themeBtn.addEventListener('click', () => {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const next = isDark ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('imgify-theme', next);
+      updateThemeIcon();
+    });
+
+    updateThemeIcon();
+  </script>
+
+</body>
+</html>

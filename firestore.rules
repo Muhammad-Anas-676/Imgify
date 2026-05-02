@@ -1,0 +1,73 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    match /uploads/{imageId} {
+      allow read: if resource.data.deleted == false || isAdmin();
+
+      // 🛡️ SUPER SECURE: Bot Protection (Data Validation)
+      allow create: if request.resource.data.keys().hasAll(['imageId', 'sessionId', 'imgbbUrl', 'deleted'])
+                    && request.resource.data.imgbbUrl is string
+                    && request.resource.data.deleted == false
+                    && request.resource.data.views == 0;
+
+      allow update: if isAdmin() || (
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views']) &&
+        request.resource.data.views == resource.data.views + 1
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    match /customSlugs/{slug} {
+      allow read: if true;
+
+      allow create: if request.resource.data.keys().hasAll(['imageId'])
+                    && request.resource.data.imageId is string;
+
+      allow update, delete: if isAdmin();
+    }
+
+    match /albums/{albumId} {
+      allow read: if resource.data.deleted == false || isAdmin();
+
+      allow create: if request.resource.data.keys().hasAll(['albumId', 'sessionId', 'name', 'deleted'])
+                    && request.resource.data.deleted == false;
+
+      // 🐛 BUG FIX: Album update rule ab user ko images link karne dega (Permission Denied error fixed)
+      allow update: if isAdmin() || (
+        request.resource.data.sessionId == resource.data.sessionId &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['sessionId', 'deleted', 'albumId'])
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    match /reports/{id} {
+      // 🐛 BUG FIX: 'open' ki jagah 'pending' use kiya gaya hai taake Frontend se match kare
+      allow create: if request.resource.data.keys().hasAll(['imageId', 'reason', 'status'])
+                    && request.resource.data.status == 'pending';
+
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /config/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /users/{uid} {
+      allow read, write: if isAdmin();
+    }
+
+    // 🐛 BUG FIX: Missing session rules add kar diye gaye hain. Ab Admin users ko ban/unban kar sakega.
+    match /sessions/{sessionId} {
+      allow read, write: if isAdmin();
+    }
+  }
+}

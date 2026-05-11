@@ -1,0 +1,1572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Imgify — Admin Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&family=Dancing+Script:wght@700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ac:#2F5DA8;--acd:#1A3D7A;--acl:#EBF2FF;
+  --bg:#fff;--bg2:#F0F4FB;--bg3:#E3EAF8;
+  --bdr:rgba(0,0,0,.08);--bdr2:rgba(47,93,168,.26);
+  --tx:#0C1F3F;--tx2:#2A3F6E;--tx3:#6B80A8;
+  --grn:#16a34a;--grnl:#f0fdf4;--red:#dc2626;--redl:#fef2f2;--amb:#d97706;
+  --glbg:rgba(255,255,255,.78);--glbl:blur(18px);
+  --r:16px;--rsm:10px;--rlg:22px;--rxl:30px;
+  --tr:.22s cubic-bezier(.4,0,.2,1);
+  --sidebar-w:240px;--sidebar-collapsed:64px;--header-h:64px;
+}
+html,body{height:100%;font-family:'DM Sans',sans-serif;color:var(--tx);background:var(--bg2);overflow:hidden}
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:99px}
+
+/* ══════════════════════════════════════
+   LOGIN
+══════════════════════════════════════ */
+#login-screen{
+  position:fixed;inset:0;background:linear-gradient(135deg,#EBF2FF 0%,#F0F4FB 50%,#E3EAF8 100%);
+  display:flex;align-items:center;justify-content:center;z-index:9000;
+}
+.login-card{
+  background:var(--glbg);backdrop-filter:var(--glbl);-webkit-backdrop-filter:var(--glbl);
+  border:1.5px solid var(--bdr2);border-radius:var(--rxl);padding:48px 40px;width:100%;max-width:420px;
+  box-shadow:0 24px 64px rgba(47,93,168,.14);text-align:center;
+}
+.login-logo{font-family:'Playfair Display',serif;font-weight:900;font-size:2.2rem;color:var(--ac);letter-spacing:-1px}
+.login-logo span{color:var(--tx3);font-weight:400}
+.login-sub{font-size:.85rem;color:var(--tx3);margin-top:4px;margin-bottom:32px;letter-spacing:.04em;text-transform:uppercase}
+.login-card h2{font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--tx);margin-bottom:24px}
+.field{margin-bottom:16px;text-align:left}
+.field label{font-size:.8rem;font-weight:600;color:var(--tx2);margin-bottom:6px;display:block;letter-spacing:.03em}
+.field input[type=text],.field input[type=password]{
+  width:100%;padding:11px 14px;border:1.5px solid var(--bdr);border-radius:var(--rsm);
+  font-family:'DM Sans',sans-serif;font-size:.93rem;background:var(--bg);color:var(--tx);
+  transition:border-color var(--tr),box-shadow var(--tr);outline:none;
+}
+.field input:focus{border-color:var(--bdr2);box-shadow:0 0 0 3px var(--acl)}
+.check-row{display:flex;align-items:center;gap:8px;margin-bottom:20px;font-size:.85rem;color:var(--tx3);cursor:pointer}
+.check-row input{accent-color:var(--ac)}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:11px 22px;border:none;border-radius:var(--rsm);font-family:'DM Sans',sans-serif;
+  font-size:.9rem;font-weight:600;cursor:pointer;transition:all var(--tr);
+}
+.btn-primary{background:var(--ac);color:#fff}
+.btn-primary:hover{background:var(--acd);transform:translateY(-1px);box-shadow:0 6px 20px rgba(47,93,168,.3)}
+.btn-danger{background:var(--red);color:#fff}
+.btn-danger:hover{background:#b91c1c}
+.btn-ghost{background:transparent;color:var(--tx3);border:1.5px solid var(--bdr)}
+.btn-ghost:hover{background:var(--bg2);color:var(--tx)}
+.btn-sm{padding:6px 14px;font-size:.8rem}
+.btn-xs{padding:4px 10px;font-size:.75rem;border-radius:6px}
+.btn-full{width:100%}
+.login-err{display:none;color:var(--red);font-size:.82rem;margin-top:12px}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+.shake{animation:shake .4s ease}
+
+/* ══════════════════════════════════════
+   APP LAYOUT
+══════════════════════════════════════ */
+#app{display:none;height:100vh;overflow:hidden}
+#app.visible{display:flex}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  width:var(--sidebar-w);min-width:var(--sidebar-w);height:100vh;
+  background:var(--bg);border-right:1.5px solid var(--bdr);
+  display:flex;flex-direction:column;transition:width var(--tr),min-width var(--tr);
+  position:relative;z-index:100;overflow:hidden;
+}
+.sidebar.collapsed{width:var(--sidebar-collapsed);min-width:var(--sidebar-collapsed)}
+.sidebar-top{
+  padding:18px 16px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1.5px solid var(--bdr);min-height:var(--header-h);
+}
+.s-logo{font-family:'Playfair Display',serif;font-weight:900;font-size:1.4rem;color:var(--ac);white-space:nowrap;overflow:hidden;transition:opacity var(--tr)}
+.sidebar.collapsed .s-logo{opacity:0;width:0;overflow:hidden}
+.collapse-btn{
+  width:32px;height:32px;border:1.5px solid var(--bdr);border-radius:8px;background:var(--bg2);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;
+  transition:all var(--tr);color:var(--tx3);font-size:1rem;
+}
+.collapse-btn:hover{background:var(--acl);color:var(--ac)}
+.sidebar-nav{flex:1;padding:12px 8px;overflow-y:auto;overflow-x:hidden}
+.nav-item{
+  display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--rsm);
+  cursor:pointer;transition:all var(--tr);white-space:nowrap;color:var(--tx2);margin-bottom:2px;
+  position:relative;
+}
+.nav-item:hover{background:var(--bg2);color:var(--ac)}
+.nav-item.active{background:var(--acl);color:var(--ac);font-weight:600}
+.nav-icon{font-size:1.15rem;flex-shrink:0;width:24px;text-align:center}
+.nav-label{font-size:.88rem;font-weight:500;transition:opacity var(--tr),width var(--tr)}
+.sidebar.collapsed .nav-label{opacity:0;width:0;overflow:hidden}
+.sidebar-foot{
+  padding:16px;border-top:1.5px solid var(--bdr);text-align:center;
+  font-family:'Dancing Script',cursive;font-size:.95rem;font-weight:700;
+  background:linear-gradient(135deg,#F5A623,#f8b500);-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  white-space:nowrap;overflow:hidden;transition:opacity var(--tr);
+}
+.sidebar.collapsed .sidebar-foot{opacity:0}
+
+/* ── MAIN AREA ── */
+.main-area{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden;min-width:0}
+
+/* ── HEADER ── */
+.header{
+  height:var(--header-h);background:var(--glbg);backdrop-filter:var(--glbl);-webkit-backdrop-filter:var(--glbl);
+  border-bottom:1.5px solid var(--bdr);display:flex;align-items:center;
+  padding:0 24px;gap:16px;flex-shrink:0;position:relative;z-index:50;
+}
+.hamburger{display:none;width:36px;height:36px;border:none;background:transparent;cursor:pointer;font-size:1.3rem;color:var(--tx);align-items:center;justify-content:center;border-radius:8px}
+.hamburger:hover{background:var(--bg2)}
+.page-title{font-family:'Playfair Display',serif;font-size:1.25rem;font-weight:700;color:var(--tx);flex:1}
+.header-search{
+  display:flex;align-items:center;gap:8px;background:var(--bg2);border:1.5px solid var(--bdr);
+  border-radius:var(--rsm);padding:7px 14px;min-width:220px;
+}
+.header-search input{border:none;background:transparent;outline:none;font-family:'DM Sans',sans-serif;font-size:.85rem;color:var(--tx);width:100%}
+.header-search input::placeholder{color:var(--tx3)}
+.notif-btn{
+  width:38px;height:38px;border:1.5px solid var(--bdr);border-radius:var(--rsm);
+  background:var(--bg2);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:1.1rem;position:relative;transition:all var(--tr);
+}
+.notif-btn:hover{background:var(--acl);border-color:var(--bdr2)}
+.notif-dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--red);border:2px solid var(--bg)}
+.admin-avatar{
+  width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--ac),var(--acd));
+  display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.9rem;
+  border:2px solid var(--bdr2);cursor:pointer;flex-shrink:0;
+}
+
+/* ── CONTENT ── */
+.content{flex:1;overflow-y:auto;padding:28px 28px;display:none}
+.content.active{display:block}
+
+/* ── SECTION TITLE ── */
+.sec-title{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:var(--tx);margin-bottom:20px}
+.sec-sub{font-size:.85rem;color:var(--tx3);margin-top:4px;margin-bottom:24px}
+
+/* ── STAT CARDS ── */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:28px}
+.stat-card{
+  background:var(--bg);border:1.5px solid var(--bdr);border-radius:var(--rlg);
+  padding:22px 20px;position:relative;overflow:hidden;
+  transition:box-shadow var(--tr),transform var(--tr);
+}
+.stat-card:hover{box-shadow:0 8px 28px rgba(47,93,168,.10);transform:translateY(-2px)}
+.stat-icon{
+  width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+  font-size:1.4rem;margin-bottom:14px;
+}
+.stat-icon.blue{background:var(--acl);color:var(--ac)}
+.stat-icon.green{background:var(--grnl);color:var(--grn)}
+.stat-icon.amber{background:#fffbeb;color:var(--amb)}
+.stat-icon.purple{background:#faf5ff;color:#7c3aed}
+.stat-num{font-family:'Playfair Display',serif;font-size:1.85rem;font-weight:900;color:var(--tx);line-height:1}
+.stat-lbl{font-size:.82rem;color:var(--tx3);margin-top:6px;font-weight:500}
+.stat-badge{
+  position:absolute;top:16px;right:16px;font-size:.72rem;font-weight:700;
+  padding:3px 9px;border-radius:99px;
+}
+.stat-badge.up{background:var(--grnl);color:var(--grn)}
+.stat-badge.down{background:var(--redl);color:var(--red)}
+
+/* ── CHARTS ── */
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:28px}
+.chart-card{
+  background:var(--bg);border:1.5px solid var(--bdr);border-radius:var(--rlg);padding:24px;
+}
+.chart-title{font-weight:700;font-size:.95rem;color:var(--tx);margin-bottom:18px}
+.chart-wrap{position:relative;height:220px}
+
+/* ── TABLE ── */
+.table-card{background:var(--bg);border:1.5px solid var(--bdr);border-radius:var(--rlg);overflow:hidden;margin-bottom:28px}
+.table-header{padding:18px 20px;border-bottom:1.5px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.table-title{font-weight:700;font-size:.95rem;color:var(--tx)}
+.t-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:.83rem}
+thead{background:var(--bg2)}
+th{padding:10px 14px;text-align:left;font-weight:600;color:var(--tx2);white-space:nowrap;font-size:.78rem;letter-spacing:.03em;border-bottom:1.5px solid var(--bdr)}
+td{padding:10px 14px;color:var(--tx);border-bottom:1px solid var(--bdr);vertical-align:middle}
+tbody tr:hover{background:var(--bg2)}
+tbody tr:last-child td{border-bottom:none}
+.thumb{width:34px;height:34px;border-radius:8px;background:var(--bg2);object-fit:cover;border:1px solid var(--bdr)}
+.mono{font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--tx3)}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:99px;font-size:.72rem;font-weight:700}
+.badge-green{background:var(--grnl);color:var(--grn)}
+.badge-red{background:var(--redl);color:var(--red)}
+.badge-blue{background:var(--acl);color:var(--ac)}
+.badge-gray{background:var(--bg3);color:var(--tx3)}
+.badge-amber{background:#fffbeb;color:var(--amb)}
+.badge-purple{background:#faf5ff;color:#7c3aed}
+.action-btn{
+  width:28px;height:28px;border:1.5px solid var(--bdr);border-radius:7px;
+  background:var(--bg2);display:inline-flex;align-items:center;justify-content:center;
+  cursor:pointer;font-size:.85rem;transition:all var(--tr);margin-right:3px;
+}
+.action-btn:hover{background:var(--acl);border-color:var(--bdr2);transform:scale(1.08)}
+.action-btn.del:hover{background:var(--redl);border-color:rgba(220,38,38,.3)}
+
+/* ── FILTER BAR ── */
+.filter-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.filter-bar input[type=text],.filter-bar select{
+  padding:8px 12px;border:1.5px solid var(--bdr);border-radius:var(--rsm);
+  font-family:'DM Sans',sans-serif;font-size:.83rem;background:var(--bg);color:var(--tx);
+  outline:none;transition:border-color var(--tr);
+}
+.filter-bar input[type=text]:focus,.filter-bar select:focus{border-color:var(--bdr2)}
+.stats-bar{display:flex;gap:18px;margin-bottom:16px;flex-wrap:wrap}
+.stats-pill{background:var(--bg);border:1.5px solid var(--bdr);border-radius:99px;padding:5px 16px;font-size:.8rem;color:var(--tx2);font-weight:500}
+.pagination{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:14px 18px;border-top:1.5px solid var(--bdr)}
+.page-btn{width:32px;height:32px;border:1.5px solid var(--bdr);border-radius:8px;background:var(--bg2);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:.82rem;transition:all var(--tr);font-family:'DM Sans',sans-serif;color:var(--tx2);font-weight:600}
+.page-btn:hover,.page-btn.active{background:var(--ac);color:#fff;border-color:var(--ac)}
+.page-info{font-size:.82rem;color:var(--tx3);padding:0 6px}
+
+/* ── SETTINGS ── */
+.settings-section{background:var(--bg);border:1.5px solid var(--bdr);border-radius:var(--rlg);overflow:hidden;margin-bottom:18px}
+.settings-section-head{
+  padding:16px 22px;background:var(--bg2);border-bottom:1.5px solid var(--bdr);
+  font-weight:700;font-size:.9rem;color:var(--tx);display:flex;align-items:center;gap:10px;cursor:pointer;
+}
+.settings-section-head .arrow{margin-left:auto;transition:transform var(--tr);color:var(--tx3);font-size:.9rem}
+.settings-section-head.open .arrow{transform:rotate(180deg)}
+.settings-body{padding:22px;display:none}
+.settings-body.open{display:block}
+.settings-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.settings-row.full{grid-template-columns:1fr}
+.settings-field{}
+.settings-field label{font-size:.8rem;font-weight:600;color:var(--tx2);margin-bottom:6px;display:block}
+.settings-field input,.settings-field textarea,.settings-field select{
+  width:100%;padding:9px 12px;border:1.5px solid var(--bdr);border-radius:var(--rsm);
+  font-family:'DM Sans',sans-serif;font-size:.88rem;background:var(--bg2);color:var(--tx);
+  outline:none;transition:border-color var(--tr);resize:vertical;
+}
+.settings-field input:focus,.settings-field textarea:focus{border-color:var(--bdr2);background:var(--bg)}
+.settings-field .note{font-size:.75rem;color:var(--tx3);margin-top:5px}
+.pw-wrap{position:relative}
+.pw-wrap input{padding-right:40px}
+.pw-eye{position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--tx3);font-size:.95rem;user-select:none}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--bdr)}
+.toggle-row:last-child{border-bottom:none}
+.toggle-row label{font-size:.88rem;font-weight:500;color:var(--tx2)}
+.toggle-switch{position:relative;width:42px;height:24px;cursor:pointer;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-track{
+  position:absolute;inset:0;border-radius:99px;background:var(--bg3);
+  transition:background var(--tr);
+}
+.toggle-switch input:checked+.toggle-track{background:var(--ac)}
+.toggle-thumb{
+  position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;
+  background:#fff;transition:transform var(--tr);box-shadow:0 2px 4px rgba(0,0,0,.15);
+}
+.toggle-switch input:checked~.toggle-thumb{transform:translateX(18px)}
+.danger-card{border:2px solid var(--red)!important;border-radius:var(--rlg);padding:22px;margin-top:8px}
+.danger-title{color:var(--red);font-weight:700;margin-bottom:16px;font-size:1rem}
+
+/* ── REDIRECT LINKS ── */
+.redirect-note{
+  background:var(--acl);border:1.5px solid var(--bdr2);border-radius:var(--rsm);
+  padding:12px 16px;font-size:.83rem;color:var(--tx2);margin-bottom:20px;line-height:1.5;
+}
+.rlink-row{
+  background:var(--bg);border:1.5px solid var(--bdr);border-radius:var(--rsm);padding:16px 18px;
+  margin-bottom:10px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+}
+.rlink-info{flex:0 0 200px}
+.rlink-label{font-weight:700;font-size:.88rem;color:var(--tx)}
+.rlink-desc{font-size:.75rem;color:var(--tx3);margin-top:2px}
+.rlink-input{flex:1;min-width:200px;padding:8px 12px;border:1.5px solid var(--bdr);border-radius:var(--rsm);font-family:'DM Sans',sans-serif;font-size:.85rem;background:var(--bg2);color:var(--tx);outline:none;transition:border-color var(--tr)}
+.rlink-input:focus{border-color:var(--bdr2)}
+.rlink-actions{display:flex;gap:6px;flex-shrink:0;align-items:center}
+
+/* ── CONTACT ICONS ── */
+.contact-icon-entry{
+  display:grid;grid-template-columns:1fr 1fr 1fr auto auto;gap:8px;align-items:center;
+  margin-bottom:8px;
+}
+.icon-preview-img{width:24px;height:24px;border-radius:4px;border:1px solid var(--bdr);object-fit:contain;background:var(--bg2)}
+
+/* ── VIEW TOGGLE ── */
+.view-toggle{display:flex;gap:4px;background:var(--bg2);border:1.5px solid var(--bdr);border-radius:8px;padding:3px}
+.vt-btn{width:28px;height:28px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:.85rem;cursor:pointer;transition:all var(--tr);color:var(--tx3);background:transparent;border:none}
+.vt-btn.active{background:var(--ac);color:#fff;box-shadow:0 2px 6px rgba(47,93,168,.3)}
+.vt-btn:not(.active):hover{background:var(--bg3);color:var(--tx)}
+
+/* ── CARD GRIDS ── */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;padding:18px}
+.card-grid.sessions-grid{grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}
+.card-grid.ads-grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+
+/* Image card */
+.img-card{background:var(--bg2);border:1.5px solid var(--bdr);border-radius:var(--r);overflow:hidden;transition:all var(--tr);cursor:default}
+.img-card:hover{border-color:var(--bdr2);box-shadow:0 6px 20px rgba(47,93,168,.1);transform:translateY(-2px)}
+.img-card-thumb{width:100%;aspect-ratio:1;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:2.4rem;border-bottom:1.5px solid var(--bdr)}
+.img-card-body{padding:10px 12px}
+.img-card-name{font-weight:600;font-size:.8rem;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px}
+.img-card-meta{font-size:.72rem;color:var(--tx3);display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.img-card-actions{display:flex;gap:5px}
+
+/* Session card */
+.sess-card{background:var(--bg2);border:1.5px solid var(--bdr);border-radius:var(--r);padding:16px;transition:all var(--tr)}
+.sess-card:hover{border-color:var(--bdr2);box-shadow:0 4px 16px rgba(47,93,168,.08)}
+.sess-card.banned{background:var(--redl);border-color:rgba(220,38,38,.25)}
+.sess-card-id{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--tx3);margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sess-card-stat{display:flex;justify-content:space-between;font-size:.78rem;margin-bottom:4px}
+.sess-card-stat span:first-child{color:var(--tx3)}
+.sess-card-stat span:last-child{font-weight:600;color:var(--tx)}
+.sess-card-foot{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid var(--bdr)}
+
+/* Album card */
+.alb-card{background:var(--bg2);border:1.5px solid var(--bdr);border-radius:var(--r);overflow:hidden;transition:all var(--tr)}
+.alb-card:hover{border-color:var(--bdr2);box-shadow:0 6px 20px rgba(47,93,168,.1);transform:translateY(-2px)}
+.alb-card-cover{width:100%;height:90px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:2.8rem;border-bottom:1.5px solid var(--bdr)}
+.alb-card-body{padding:12px}
+.alb-card-name{font-weight:700;font-size:.88rem;color:var(--tx);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.alb-card-meta{font-size:.74rem;color:var(--tx3);margin-bottom:8px}
+.alb-card-foot{display:flex;align-items:center;justify-content:space-between}
+
+/* Ad card */
+.ad-card{background:var(--bg2);border:1.5px solid var(--bdr);border-radius:var(--r);padding:16px;transition:all var(--tr)}
+.ad-card:hover{border-color:var(--bdr2);box-shadow:0 4px 16px rgba(47,93,168,.08)}
+.ad-card-icon{font-size:1.8rem;margin-bottom:8px}
+.ad-card-title{font-weight:700;font-size:.9rem;color:var(--tx);margin-bottom:4px}
+.ad-card-dest{font-size:.74rem;color:var(--ac);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:8px}
+.ad-card-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.ad-card-foot{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid var(--bdr)}
+
+/* ── ADS MANAGER ── */
+.ads-global-bar{
+  background:var(--bg);border:1.5px solid var(--bdr);border-radius:var(--rlg);
+  padding:16px 22px;display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;
+}
+.ad-preview-img{width:60px;height:30px;object-fit:cover;border-radius:6px;border:1px solid var(--bdr);background:var(--bg2)}
+
+/* ── MODALS ── */
+.mov{
+  position:fixed;inset:0;background:rgba(12,31,63,.45);backdrop-filter:blur(4px);
+  display:none;align-items:center;justify-content:center;z-index:8000;padding:16px;
+}
+.mov.open{display:flex}
+.mbox{
+  background:var(--bg);border:1.5px solid var(--bdr2);border-radius:var(--rxl);
+  padding:32px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;
+  box-shadow:0 32px 80px rgba(47,93,168,.18);animation:mslide .22s ease;
+}
+.mbox.sm{max-width:380px}
+@keyframes mslide{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+.mbox-title{font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;color:var(--tx);margin-bottom:20px}
+.mbox-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:24px;padding-top:20px;border-top:1.5px solid var(--bdr)}
+.mbox-field{margin-bottom:16px}
+.mbox-field label{font-size:.8rem;font-weight:600;color:var(--tx2);margin-bottom:6px;display:block}
+.mbox-field input,.mbox-field select,.mbox-field textarea{
+  width:100%;padding:9px 12px;border:1.5px solid var(--bdr);border-radius:var(--rsm);
+  font-family:'DM Sans',sans-serif;font-size:.88rem;background:var(--bg2);color:var(--tx);outline:none;
+  transition:border-color var(--tr);
+}
+.mbox-field input:focus,.mbox-field select:focus{border-color:var(--bdr2);background:var(--bg)}
+
+/* ── TOAST ── */
+#toast-container{position:fixed;top:20px;right:20px;z-index:99999;display:flex;flex-direction:column;gap:10px}
+.toast{
+  display:flex;align-items:center;gap:10px;padding:13px 18px;border-radius:12px;
+  background:#fff;border:1.5px solid var(--bdr);box-shadow:0 8px 32px rgba(0,0,0,.12);
+  font-size:.85rem;font-weight:500;color:var(--tx);min-width:260px;max-width:360px;
+  animation:tslide .22s ease;pointer-events:none;
+}
+@keyframes tslide{from{transform:translateX(60px);opacity:0}to{transform:translateX(0);opacity:1}}
+.toast.success{border-color:rgba(22,163,74,.3);background:var(--grnl)}
+.toast.error{border-color:rgba(220,38,38,.3);background:var(--redl)}
+.toast.info{border-color:var(--bdr2);background:var(--acl)}
+.toast-icon{font-size:1rem}
+.toast-out{animation:tout .22s ease forwards}
+@keyframes tout{to{transform:translateX(60px);opacity:0}}
+
+/* ── MOBILE OVERLAY ── */
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(12,31,63,.4);z-index:90}
+@media(max-width:768px){
+  .stat-grid{grid-template-columns:repeat(2,1fr)}
+  .chart-grid{grid-template-columns:1fr}
+  .sidebar{position:fixed;left:-100%;height:100vh;z-index:200;width:var(--sidebar-w)!important;min-width:var(--sidebar-w)!important;transition:left var(--tr)}
+  .sidebar.mobile-open{left:0}
+  .sidebar-overlay{display:block}
+  .hamburger{display:flex}
+  .header-search{display:none}
+  .content{padding:16px}
+  .settings-row{grid-template-columns:1fr}
+  .contact-icon-entry{grid-template-columns:1fr 1fr;gap:6px}
+}
+@media(max-width:480px){
+  .stat-grid{grid-template-columns:1fr}
+  .rlink-row{flex-direction:column;align-items:flex-start}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card" id="login-card">
+    <div class="login-logo">img<span>ify</span></div>
+    <div class="login-sub">Admin Panel</div>
+    <div class="field"><label>Username</label><input type="text" id="u-input" placeholder="admin"/></div>
+    <div class="field"><label>Password</label><input type="password" id="p-input" placeholder="••••••••"/></div>
+    <label class="check-row"><input type="checkbox" id="remember-me"/> Remember me</label>
+    <button class="btn btn-primary btn-full" onclick="doLogin()">Sign In</button>
+    <div class="login-err" id="login-err">❌ Invalid credentials. Try admin / imgify2024</div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast-container"></div>
+
+<!-- APP -->
+<div id="app">
+  <div class="sidebar-overlay" id="overlay" onclick="closeMobileSidebar()"></div>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-top">
+      <div class="s-logo">imgify</div>
+      <div class="collapse-btn" onclick="toggleCollapse()">⟨</div>
+    </div>
+    <nav class="sidebar-nav" id="sidebar-nav">
+      <div class="nav-item active" data-sec="dashboard" onclick="navigate(this)">
+        <span class="nav-icon">📊</span><span class="nav-label">Dashboard</span>
+      </div>
+      <div class="nav-item" data-sec="images" onclick="navigate(this)">
+        <span class="nav-icon">🖼️</span><span class="nav-label">Images</span>
+      </div>
+      <div class="nav-item" data-sec="users" onclick="navigate(this)">
+        <span class="nav-icon">👥</span><span class="nav-label">Users / Sessions</span>
+      </div>
+      <div class="nav-item" data-sec="albums" onclick="navigate(this)">
+        <span class="nav-icon">📁</span><span class="nav-label">Albums</span>
+      </div>
+      <div class="nav-item" data-sec="ads" onclick="navigate(this)">
+        <span class="nav-icon">📢</span><span class="nav-label">Ads Manager</span>
+      </div>
+      <div class="nav-item" data-sec="redirect" onclick="navigate(this)">
+        <span class="nav-icon">🔗</span><span class="nav-label">Redirect Links</span>
+      </div>
+      <div class="nav-item" data-sec="settings" onclick="navigate(this)">
+        <span class="nav-icon">⚙️</span><span class="nav-label">Settings</span>
+      </div>
+    </nav>
+    <div class="sidebar-foot">✦ Made By Anas</div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main-area">
+    <!-- HEADER -->
+    <header class="header">
+      <button class="hamburger" onclick="openMobileSidebar()">☰</button>
+      <div class="page-title" id="page-title">Dashboard</div>
+      <div class="header-search">
+        <span style="color:var(--tx3);font-size:.9rem">🔍</span>
+        <input type="text" placeholder="Search..."/>
+      </div>
+      <div class="notif-btn">🔔<span class="notif-dot"></span></div>
+      <div class="admin-avatar">A</div>
+      <button class="btn btn-ghost btn-sm" onclick="doLogout()">Logout</button>
+    </header>
+
+    <!-- DASHBOARD -->
+    <div class="content active" id="sec-dashboard">
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-badge up">↑12% this month</div>
+          <div class="stat-icon blue">🖼️</div>
+          <div class="stat-num">50,247</div>
+          <div class="stat-lbl">Total Images</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-badge up">↑8% today</div>
+          <div class="stat-icon green">👥</div>
+          <div class="stat-num">1,842</div>
+          <div class="stat-lbl">Active Sessions</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-badge amber" style="background:#fffbeb;color:var(--amb)">18.4% used</div>
+          <div class="stat-icon amber">💾</div>
+          <div class="stat-num">18.4 GB</div>
+          <div class="stat-lbl">Storage Used (of 100GB)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-badge up">↑3 this week</div>
+          <div class="stat-icon purple">📁</div>
+          <div class="stat-num">384</div>
+          <div class="stat-lbl">Total Albums</div>
+        </div>
+      </div>
+      <div class="chart-grid">
+        <div class="chart-card">
+          <div class="chart-title">📈 Uploads Over Time (Last 7 Days)</div>
+          <div class="chart-wrap"><canvas id="uploads-chart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">🔒 Image Privacy Distribution</div>
+          <div class="chart-wrap"><canvas id="privacy-chart"></canvas></div>
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">🕐 Recent Activity</div>
+        </div>
+        <div class="t-scroll">
+          <table id="activity-table">
+            <thead><tr>
+              <th>Thumb</th><th>File Name</th><th>Size</th><th>Privacy</th><th>Uploaded At</th><th>Status</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="activity-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- IMAGES -->
+    <div class="content" id="sec-images">
+      <div class="filter-bar">
+        <input type="text" placeholder="🔍 Search images..." style="min-width:200px"/>
+        <select><option>All Privacy</option><option>Public</option><option>Unlisted</option><option>Private</option></select>
+        <select><option>Newest</option><option>Oldest</option><option>Largest</option><option>Smallest</option></select>
+        <select><option>All Status</option><option>Active</option><option>Expired</option></select>
+        <button class="btn btn-danger btn-sm" id="bulk-delete-btn" style="display:none" onclick="toast('Bulk delete simulated','success')">🗑 Delete Selected</button>
+      </div>
+      <div class="stats-bar">
+        <div class="stats-pill">📦 Total: 50,247</div>
+        <div class="stats-pill">🌐 Public: 34,168</div>
+        <div class="stats-pill">🔗 Unlisted: 11,054</div>
+        <div class="stats-pill">🔒 Private: 5,025</div>
+      </div>
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">🖼️ All Images</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <label style="font-size:.82rem;color:var(--tx3);display:flex;align-items:center;gap:6px;cursor:pointer">
+              <input type="checkbox" id="select-all" onchange="toggleSelectAll(this)"/> Select All
+            </label>
+            <div class="view-toggle">
+              <button class="vt-btn active" id="img-vt-list" onclick="setView('images','list')" title="List view">☰</button>
+              <button class="vt-btn" id="img-vt-card" onclick="setView('images','card')" title="Card view">⊞</button>
+            </div>
+          </div>
+        </div>
+        <div class="t-scroll" id="images-list-view">
+          <table>
+            <thead><tr>
+              <th><input type="checkbox" id="cb-head" onchange="toggleSelectAll(this)"/></th>
+              <th>#</th><th>Thumb</th><th>Name</th><th>Slug</th><th>Size</th><th>Privacy</th><th>Tags</th><th>Expiry</th><th>Uploaded At</th><th>Views</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="images-tbody"></tbody>
+          </table>
+        </div>
+        <div class="card-grid" id="images-card-view" style="display:none"></div>
+        <div class="pagination">
+          <button class="page-btn">‹</button>
+          <button class="page-btn active">1</button>
+          <button class="page-btn">2</button>
+          <button class="page-btn">3</button>
+          <span class="page-info">Page 1 of 3</span>
+          <button class="page-btn">›</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- USERS -->
+    <div class="content" id="sec-users">
+      <div class="stat-grid" style="grid-template-columns:repeat(4,1fr)">
+        <div class="stat-card"><div class="stat-icon blue">👥</div><div class="stat-num">1,842</div><div class="stat-lbl">Total Sessions</div></div>
+        <div class="stat-card"><div class="stat-icon green">✅</div><div class="stat-num">248</div><div class="stat-lbl">Active Today</div></div>
+        <div class="stat-card"><div class="stat-icon amber">📤</div><div class="stat-num">27.3</div><div class="stat-lbl">Avg Uploads/Session</div></div>
+        <div class="stat-card"><div class="stat-icon purple">🏆</div><div class="stat-num">412</div><div class="stat-lbl">Top Session Uploads</div></div>
+      </div>
+      <div class="filter-bar">
+        <input type="text" placeholder="🔍 Search session ID..." style="min-width:220px"/>
+        <select><option>All Status</option><option>Active</option><option>Inactive</option><option>Banned</option></select>
+      </div>
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">👥 Sessions</div>
+          <div class="view-toggle">
+            <button class="vt-btn active" id="sess-vt-list" onclick="setView('sessions','list')" title="List view">☰</button>
+            <button class="vt-btn" id="sess-vt-card" onclick="setView('sessions','card')" title="Card view">⊞</button>
+          </div>
+        </div>
+        <div class="t-scroll" id="sessions-list-view">
+          <table>
+            <thead><tr>
+              <th>Session ID</th><th>First Seen</th><th>Last Active</th><th>Uploads</th><th>Total Size</th><th>Browser</th><th>Status</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="sessions-tbody"></tbody>
+          </table>
+        </div>
+        <div class="card-grid sessions-grid" id="sessions-card-view" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- ALBUMS -->
+    <div class="content" id="sec-albums">
+      <div class="stat-grid" style="grid-template-columns:repeat(4,1fr)">
+        <div class="stat-card"><div class="stat-icon blue">📁</div><div class="stat-num">384</div><div class="stat-lbl">Total Albums</div></div>
+        <div class="stat-card"><div class="stat-icon green">🌐</div><div class="stat-num">271</div><div class="stat-lbl">Public Albums</div></div>
+        <div class="stat-card"><div class="stat-icon amber">🔒</div><div class="stat-num">113</div><div class="stat-lbl">Private Albums</div></div>
+        <div class="stat-card"><div class="stat-icon purple">🖼️</div><div class="stat-num">8,492</div><div class="stat-lbl">Total Images in Albums</div></div>
+      </div>
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">📁 Albums</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <button class="btn btn-primary btn-sm" onclick="openAlbumModal()">+ Create Album</button>
+            <div class="view-toggle">
+              <button class="vt-btn active" id="alb-vt-list" onclick="setView('albums','list')" title="List view">☰</button>
+              <button class="vt-btn" id="alb-vt-card" onclick="setView('albums','card')" title="Card view">⊞</button>
+            </div>
+          </div>
+        </div>
+        <div class="t-scroll" id="albums-list-view">
+          <table>
+            <thead><tr>
+              <th>Cover</th><th>Album Name</th><th>Slug</th><th>Owner Session</th><th>Images</th><th>Privacy</th><th>Created At</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="albums-tbody"></tbody>
+          </table>
+        </div>
+        <div class="card-grid" id="albums-card-view" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- ADS MANAGER -->
+    <div class="content" id="sec-ads">
+      <div class="ads-global-bar">
+        <div>
+          <div style="font-weight:700;font-size:.95rem;color:var(--tx)">📢 Global Ads Status</div>
+          <div style="font-size:.8rem;color:var(--tx3);margin-top:3px">Toggle to enable or disable all ads site-wide</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" checked onchange="toast('Ads '+(this.checked?'enabled':'disabled'),'success')"/>
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+      </div>
+      <div class="table-card">
+        <div class="table-header">
+          <div class="table-title">📢 Ads & Affiliate Links</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <button class="btn btn-primary btn-sm" onclick="openAdModal()">+ Add New Ad</button>
+            <div class="view-toggle">
+              <button class="vt-btn active" id="ads-vt-list" onclick="setView('ads','list')" title="List view">☰</button>
+              <button class="vt-btn" id="ads-vt-card" onclick="setView('ads','card')" title="Card view">⊞</button>
+            </div>
+          </div>
+        </div>
+        <div class="t-scroll" id="ads-list-view">
+          <table>
+            <thead><tr>
+              <th>Preview</th><th>Type</th><th>Title</th><th>Destination URL</th><th>Position</th><th>Priority</th><th>Status</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="ads-tbody"></tbody>
+          </table>
+        </div>
+        <div class="card-grid ads-grid" id="ads-card-view" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- REDIRECT LINKS -->
+    <div class="content" id="sec-redirect">
+      <div class="sec-title">🔗 Redirect Links</div>
+      <div class="redirect-note">
+        These links control where users are redirected when clicking legal/contact links in the user panel. If a link is left empty, the corresponding modal will open instead.
+      </div>
+      <div id="redirect-links-list"></div>
+      <div style="margin-top:10px;text-align:right">
+        <button class="btn btn-primary" onclick="saveAllLinks()">💾 Save All Links</button>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="content" id="sec-settings">
+      <div class="sec-title">⚙️ Settings</div>
+
+      <!-- GENERAL -->
+      <div class="settings-section">
+        <div class="settings-section-head open" onclick="toggleAcc(this)">🌐 General <span class="arrow">▾</span></div>
+        <div class="settings-body open">
+          <div class="settings-row">
+            <div class="settings-field"><label>Site Name</label><input type="text" value="Imgify"/></div>
+            <div class="settings-field"><label>Site Tagline</label><input type="text" value="Fast. Free. Forever."/></div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-field"><label>Max File Size (MB)</label><input type="number" value="32"/></div>
+            <div class="settings-field"><label>Max Files Per Batch</label><input type="number" value="10"/></div>
+          </div>
+          <div class="settings-row full">
+            <div class="settings-field"><label>Verified Domains (one per line)</label><textarea rows="3" placeholder="example.com&#10;mysite.net"></textarea></div>
+          </div>
+          <div class="toggle-row"><label>Allow Uploads</label><label class="toggle-switch"><input type="checkbox" checked/><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>
+        </div>
+      </div>
+
+      <!-- MAINTENANCE -->
+      <div class="settings-section">
+        <div class="settings-section-head" onclick="toggleAcc(this)">🔧 Maintenance & Announcements <span class="arrow">▾</span></div>
+        <div class="settings-body">
+          <div class="toggle-row"><label>Maintenance Mode</label><label class="toggle-switch"><input type="checkbox"/><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>
+          <div class="settings-row full" style="margin-top:12px">
+            <div class="settings-field"><label>Maintenance Message</label><input type="text" value="We'll be back shortly!"/></div>
+          </div>
+          <div class="toggle-row"><label>Announcement Enabled</label><label class="toggle-switch"><input type="checkbox" checked/><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>
+          <div class="settings-row full" style="margin-top:12px">
+            <div class="settings-field"><label>Announcement Text</label><input type="text" value="New feature: Album password protection is now live!"/></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DEVELOPER -->
+      <div class="settings-section">
+        <div class="settings-section-head" onclick="toggleAcc(this)">👨‍💻 Developer Info <span class="arrow">▾</span></div>
+        <div class="settings-body">
+          <div class="settings-row">
+            <div class="settings-field"><label>Developer Name</label><input type="text" value="Muhammad Anas"/></div>
+            <div class="settings-field"><label>Copyright Year</label><input type="number" value="2024"/></div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-field"><label>GitHub URL</label><input type="text" placeholder="https://github.com/..."/></div>
+            <div class="settings-field"><label>Contact Email</label><input type="text" placeholder="admin@imgify.site"/></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- IMGBB -->
+      <div class="settings-section">
+        <div class="settings-section-head" onclick="toggleAcc(this)">🔑 ImgBB Configuration <span class="arrow">▾</span></div>
+        <div class="settings-body">
+          <div class="settings-row full">
+            <div class="settings-field">
+              <label>ImgBB API Key</label>
+              <div class="pw-wrap">
+                <input type="password" value="demo_api_key_here" id="imgbb-key"/>
+                <span class="pw-eye" onclick="togglePw('imgbb-key',this)">👁</span>
+              </div>
+              <div class="note">Get your API key from <a href="https://imgbb.com/api" target="_blank" style="color:var(--ac)">imgbb.com/api</a></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FIREBASE -->
+      <div class="settings-section">
+        <div class="settings-section-head" onclick="toggleAcc(this)">🔥 Firebase Configuration <span class="arrow">▾</span></div>
+        <div class="settings-body">
+          <div class="settings-row">
+            <div class="settings-field"><label>API Key</label><div class="pw-wrap"><input type="password" value="AIzaSy..." id="fb-apikey"/><span class="pw-eye" onclick="togglePw('fb-apikey',this)">👁</span></div></div>
+            <div class="settings-field"><label>Auth Domain</label><input type="text" value="my-project.firebaseapp.com"/></div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-field"><label>Project ID</label><input type="text" value="my-project-id"/></div>
+            <div class="settings-field"><label>Storage Bucket</label><input type="text" value="my-project.appspot.com"/></div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-field"><label>Messaging Sender ID</label><div class="pw-wrap"><input type="password" value="123456789" id="fb-msid"/><span class="pw-eye" onclick="togglePw('fb-msid',this)">👁</span></div></div>
+            <div class="settings-field"><label>App ID</label><div class="pw-wrap"><input type="password" value="1:123:web:abc" id="fb-appid"/><span class="pw-eye" onclick="togglePw('fb-appid',this)">👁</span></div></div>
+          </div>
+          <div class="note" style="margin-top:4px">Get these values from your <a href="https://console.firebase.google.com" target="_blank" style="color:var(--ac)">Firebase Console → Project Settings</a></div>
+        </div>
+      </div>
+
+      <!-- PAYMENT -->
+      <div class="settings-section">
+        <div class="settings-section-head" onclick="toggleAcc(this)">💳 Payment / Donation <span class="arrow">▾</span></div>
+        <div class="settings-body">
+          <div class="settings-row">
+            <div class="settings-field"><label>EasyPaisa Number</label><input type="text" value="0312-XXXXXXX"/></div>
+            <div class="settings-field"><label>EasyPaisa Icon URL</label><input type="text" id="ep-icon" placeholder="https://..." oninput="updatePreview('ep-icon','ep-prev')"/></div>
+          </div>
+          <div style="margin-bottom:16px;display:flex;align-items:center;gap:8px"><span style="font-size:.8rem;color:var(--tx3)">Preview:</span><img id="ep-prev" src="" alt="" style="width:42px;height:42px;border-radius:8px;border:1px solid var(--bdr);object-fit:contain;background:var(--bg2)"/></div>
+          <div class="settings-row">
+            <div class="settings-field"><label>JazzCash Number</label><input type="text" value="0300-XXXXXXX"/></div>
+            <div class="settings-field"><label>JazzCash Icon URL</label><input type="text" id="jc-icon" placeholder="https://..." oninput="updatePreview('jc-icon','jc-prev')"/></div>
+          </div>
+          <div style="margin-bottom:16px;display:flex;align-items:center;gap:8px"><span style="font-size:.8rem;color:var(--tx3)">Preview:</span><img id="jc-prev" src="" alt="" style="width:42px;height:42px;border-radius:8px;border:1px solid var(--bdr);object-fit:contain;background:var(--bg2)"/></div>
+          <div class="settings-row">
+            <div class="settings-field"><label>Payoneer Email</label><input type="text" value="admin@email.com"/></div>
+            <div class="settings-field"><label>Payoneer Icon URL</label><input type="text" id="po-icon" placeholder="https://..." oninput="updatePreview('po-icon','po-prev')"/></div>
+          </div>
+          <div style="margin-bottom:16px;display:flex;align-items:center;gap:8px"><span style="font-size:.8rem;color:var(--tx3)">Preview:</span><img id="po-prev" src="" alt="" style="width:42px;height:42px;border-radius:8px;border:1px solid var(--bdr);object-fit:contain;background:var(--bg2)"/></div>
+          <div class="toggle-row"><label>Donation Section Enabled</label><label class="toggle-switch"><input type="checkbox" checked/><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>
+        </div>
+      </div>
+
+      <!-- DANGER -->
+      <div class="settings-section">
+        <div class="settings-section-head" onclick="toggleAcc(this)" style="color:var(--red)">⚠️ Danger Zone <span class="arrow">▾</span></div>
+        <div class="settings-body">
+          <div class="danger-card">
+            <div class="danger-title">⚠️ Irreversible Actions</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button class="btn btn-danger btn-sm" onclick="confirmAction('Clear all session data?','clearSessions')">🗑 Clear All Session Data</button>
+              <button class="btn btn-sm btn-ghost" onclick="exportMockJson()">📤 Export Image Records</button>
+              <button class="btn btn-danger btn-sm" onclick="confirmAction('Reset all settings to defaults?','resetSettings')">↺ Reset to Defaults</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:20px;text-align:right">
+        <button class="btn btn-primary" onclick="toast('Settings saved!','success')">💾 Save All Settings</button>
+      </div>
+    </div>
+
+  </div><!-- /main-area -->
+</div><!-- /app -->
+
+<!-- MODALS -->
+<!-- Album Modal -->
+<div class="mov" id="album-modal" onclick="closeModal(this,event)">
+  <div class="mbox">
+    <div class="mbox-title" id="album-modal-title">Create Album</div>
+    <div class="mbox-field"><label>Album Name</label><input type="text" id="alb-name" placeholder="My Travel Photos"/></div>
+    <div class="mbox-field"><label>Description</label><input type="text" id="alb-desc" placeholder="A collection of..."/></div>
+    <div class="mbox-field"><label>Privacy</label><select id="alb-priv"><option>Public</option><option>Unlisted</option><option>Private</option></select></div>
+    <div class="mbox-field"><label>Cover Image URL</label><input type="text" id="alb-cover" placeholder="https://..."/></div>
+    <div class="mbox-footer"><button class="btn btn-ghost" onclick="closeModal(document.getElementById('album-modal'))">Cancel</button><button class="btn btn-primary" onclick="saveAlbum()">Save Album</button></div>
+  </div>
+</div>
+
+<!-- Ad Modal -->
+<div class="mov" id="ad-modal" onclick="closeModal(this,event)">
+  <div class="mbox">
+    <div class="mbox-title">Add / Edit Ad</div>
+    <div class="mbox-field"><label>Type</label><select id="ad-type"><option>Banner Ad</option><option>Affiliate Link</option><option>Donation CTA</option></select></div>
+    <div class="mbox-field"><label>Title</label><input type="text" id="ad-title" placeholder="Spring Sale Banner"/></div>
+    <div class="mbox-field"><label>Destination URL</label><input type="text" id="ad-dest" placeholder="https://..."/></div>
+    <div class="mbox-field"><label>Banner Image URL</label><input type="text" id="ad-img" placeholder="https://..."/></div>
+    <div class="mbox-field"><label>Position</label><select id="ad-pos"><option>Top of Page</option><option>Below Upload</option><option>Sidebar</option><option>Footer</option><option>Between Results</option></select></div>
+    <div class="mbox-field"><label>Priority (1–10)</label><input type="number" id="ad-pri" value="5" min="1" max="10"/></div>
+    <div class="mbox-field" style="display:flex;align-items:center;justify-content:space-between"><label>Status (Active)</label><label class="toggle-switch"><input type="checkbox" id="ad-status" checked/><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>
+    <div class="mbox-footer"><button class="btn btn-ghost" onclick="closeModal(document.getElementById('ad-modal'))">Cancel</button><button class="btn btn-primary" onclick="saveAd()">Save Ad</button></div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="mov" id="confirm-modal" onclick="closeModal(this,event)">
+  <div class="mbox sm">
+    <div class="mbox-title">Confirm Action</div>
+    <p id="confirm-msg" style="color:var(--tx2);font-size:.9rem;margin-bottom:0"></p>
+    <div class="mbox-footer">
+      <button class="btn btn-ghost" onclick="closeModal(document.getElementById('confirm-modal'))">Cancel</button>
+      <button class="btn btn-danger" id="confirm-ok-btn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════
+   FIREBASE CONFIG (fill in your values)
+══════════════════════════════════════════════════════ */
+const FIREBASE_CONFIG={apiKey:"",authDomain:"",projectId:"",storageBucket:"",messagingSenderId:"",appId:""};
+
+let db=null,DB_READY=false;
+(function(){
+  try{
+    if(FIREBASE_CONFIG.apiKey&&FIREBASE_CONFIG.projectId){
+      firebase.initializeApp(FIREBASE_CONFIG);
+      db=firebase.firestore();
+      DB_READY=true;
+      console.log('[Imgify Admin] Firebase connected ✓');
+    }else{
+      console.warn('[Imgify Admin] FIREBASE_CONFIG not filled. Images tab will show placeholder.');
+    }
+  }catch(e){console.warn('[Imgify Admin] Firebase init:',e);}
+})();
+
+/* ══════════════════════════════════════════════════════
+   MOCK DATA
+══════════════════════════════════════════════════════ */
+const MOCK_ACTIVITY=[
+  {thumb:'🏔️',name:'mountain-peak.jpg',size:'2.4 MB',privacy:'Public',uploaded:'2024-12-01 14:32',status:'active'},
+  {thumb:'🌅',name:'sunset-beach.png',size:'4.1 MB',privacy:'Unlisted',uploaded:'2024-12-01 13:15',status:'active'},
+  {thumb:'🐱',name:'cute-cat-01.jpg',size:'1.2 MB',privacy:'Public',uploaded:'2024-12-01 12:00',status:'active'},
+  {thumb:'🎨',name:'artwork-abstract.png',size:'8.7 MB',privacy:'Private',uploaded:'2024-12-01 11:44',status:'active'},
+  {thumb:'🏙️',name:'city-night.jpg',size:'3.3 MB',privacy:'Public',uploaded:'2024-12-01 10:20',status:'active'},
+  {thumb:'🌸',name:'cherry-blossoms.jpg',size:'2.8 MB',privacy:'Public',uploaded:'2024-11-30 22:11',status:'active'},
+  {thumb:'🦁',name:'lion-savanna.jpg',size:'5.6 MB',privacy:'Unlisted',uploaded:'2024-11-30 20:05',status:'active'},
+  {thumb:'🍕',name:'pizza-closeup.jpg',size:'1.9 MB',privacy:'Public',uploaded:'2024-11-30 18:48',status:'expired'},
+  {thumb:'⛵',name:'sailing-boat.png',size:'3.7 MB',privacy:'Private',uploaded:'2024-11-30 17:30',status:'active'},
+  {thumb:'🌿',name:'forest-path.jpg',size:'2.1 MB',privacy:'Public',uploaded:'2024-11-30 16:00',status:'active'},
+];
+
+let _imagesData=[]; /* Populated from Firestore; fallback to MOCK_IMAGES for export */
+
+const MOCK_IMAGES=[
+  {id:1,name:'mountain-peak.jpg',slug:'mtn-peak-x9k2',size:'2.4 MB',privacy:'Public',tags:'nature,travel',expiry:'Never',uploaded:'2024-12-01',views:1247},
+  {id:2,name:'sunset-beach.png',slug:'sunset-bch-3f7q',size:'4.1 MB',privacy:'Unlisted',tags:'beach,sky',expiry:'2025-01-01',uploaded:'2024-12-01',views:834},
+  {id:3,name:'cute-cat-01.jpg',slug:'cat-01-p8m4',size:'1.2 MB',privacy:'Public',tags:'cat,pet',expiry:'Never',uploaded:'2024-12-01',views:5621},
+  {id:4,name:'artwork-abstract.png',slug:'art-abs-7n1d',size:'8.7 MB',privacy:'Private',tags:'art',expiry:'Never',uploaded:'2024-12-01',views:22},
+  {id:5,name:'city-night.jpg',slug:'city-ngt-k4p0',size:'3.3 MB',privacy:'Public',tags:'city,night',expiry:'Never',uploaded:'2024-12-01',views:2104},
+  {id:6,name:'cherry-blossoms.jpg',slug:'cherry-bls-r5j9',size:'2.8 MB',privacy:'Public',tags:'japan,spring',expiry:'Never',uploaded:'2024-11-30',views:988},
+  {id:7,name:'lion-savanna.jpg',slug:'lion-svg-t3h8',size:'5.6 MB',privacy:'Unlisted',tags:'animal,africa',expiry:'2024-12-31',uploaded:'2024-11-30',views:441},
+  {id:8,name:'pizza-closeup.jpg',slug:'pizza-cls-w9d2',size:'1.9 MB',privacy:'Public',tags:'food',expiry:'Expired',uploaded:'2024-11-30',views:3302},
+  {id:9,name:'sailing-boat.png',slug:'sail-bt-z1q6',size:'3.7 MB',privacy:'Private',tags:'sea',expiry:'Never',uploaded:'2024-11-30',views:12},
+  {id:10,name:'forest-path.jpg',slug:'frst-path-m8y5',size:'2.1 MB',privacy:'Public',tags:'nature',expiry:'Never',uploaded:'2024-11-30',views:676},
+  {id:11,name:'waterfall-hd.jpg',slug:'wfall-hd-s4v3',size:'6.2 MB',privacy:'Public',tags:'nature,water',expiry:'Never',uploaded:'2024-11-29',views:1893},
+  {id:12,name:'portrait-01.jpg',slug:'port-01-b6x4',size:'3.4 MB',privacy:'Private',tags:'portrait',expiry:'Never',uploaded:'2024-11-29',views:5},
+  {id:13,name:'logo-design.png',slug:'logo-ds-c9n7',size:'0.8 MB',privacy:'Unlisted',tags:'design',expiry:'Never',uploaded:'2024-11-28',views:211},
+  {id:14,name:'dogs-playing.jpg',slug:'dogs-py-e2k1',size:'4.5 MB',privacy:'Public',tags:'dogs,pet',expiry:'Never',uploaded:'2024-11-28',views:7741},
+  {id:15,name:'macro-flower.jpg',slug:'mcro-flwr-h7q0',size:'2.9 MB',privacy:'Public',tags:'macro,flower',expiry:'Never',uploaded:'2024-11-27',views:529},
+];
+
+const MOCK_SESSIONS=[
+  {id:'sess_8f3kL9pQ2x',first:'2024-11-28',last:'2024-12-01',uploads:412,size:'2.1 GB',browser:'Chrome 120 / Win',status:'active'},
+  {id:'sess_2dNm7rVc0y',first:'2024-11-29',last:'2024-12-01',uploads:284,size:'1.4 GB',browser:'Firefox 121 / Mac',status:'active'},
+  {id:'sess_5hXwP4tK8s',first:'2024-11-30',last:'2024-12-01',uploads:198,size:'940 MB',browser:'Safari 17 / iOS',status:'active'},
+  {id:'sess_9aQzE1uJ6b',first:'2024-11-25',last:'2024-11-30',uploads:157,size:'780 MB',browser:'Edge 120 / Win',status:'inactive'},
+  {id:'sess_3lFnG8yR5m',first:'2024-11-20',last:'2024-11-28',uploads:122,size:'612 MB',browser:'Chrome 119 / Android',status:'inactive'},
+  {id:'sess_7cBvD6wH2n',first:'2024-12-01',last:'2024-12-01',uploads:88,size:'440 MB',browser:'Chrome 120 / Win',status:'active'},
+  {id:'sess_0kMtI5sL3q',first:'2024-11-15',last:'2024-11-22',uploads:61,size:'310 MB',browser:'Safari 16 / Mac',status:'inactive'},
+  {id:'sess_4oYjO9xC7e',first:'2024-12-01',last:'2024-12-01',uploads:44,size:'219 MB',browser:'Chrome 120 / Linux',status:'active'},
+  {id:'sess_1pUhA3vM8z',first:'2024-11-10',last:'2024-11-18',uploads:33,size:'165 MB',browser:'Firefox 120 / Win',status:'inactive'},
+  {id:'sess_6rWbN2qF9d',first:'2024-11-05',last:'2024-11-12',uploads:17,size:'84 MB',browser:'Chrome 118 / Mac',status:'banned'},
+  {id:'sess_8tZcP7nG1k',first:'2024-12-01',last:'2024-12-01',uploads:9,size:'42 MB',browser:'Mobile Safari / iOS',status:'active'},
+  {id:'sess_2yKsQ5eT4j',first:'2024-10-28',last:'2024-11-03',uploads:5,size:'24 MB',browser:'Chrome 117 / Win',status:'inactive'},
+];
+
+const MOCK_ALBUMS=[
+  {cover:'🏔️',name:'Mountain Adventures',slug:'mountain-adventures',owner:'sess_8f3kL9pQ2x',count:48,privacy:'Public',created:'2024-11-28'},
+  {cover:'🌅',name:'Beach Sunsets',slug:'beach-sunsets',owner:'sess_2dNm7rVc0y',count:23,privacy:'Public',created:'2024-11-29'},
+  {cover:'🐾',name:'Cute Pets',slug:'cute-pets',owner:'sess_5hXwP4tK8s',count:112,privacy:'Public',created:'2024-11-30'},
+  {cover:'🎨',name:'My Artwork',slug:'my-artwork',owner:'sess_9aQzE1uJ6b',count:17,privacy:'Private',created:'2024-11-25'},
+  {cover:'🏙️',name:'Urban Nights',slug:'urban-nights',owner:'sess_3lFnG8yR5m',count:34,privacy:'Unlisted',created:'2024-11-20'},
+  {cover:'🌸',name:'Spring Collection',slug:'spring-collection',owner:'sess_7cBvD6wH2n',count:29,privacy:'Public',created:'2024-12-01'},
+  {cover:'🦁',name:'Wildlife Safari',slug:'wildlife-safari',owner:'sess_0kMtI5sL3q',count:56,privacy:'Public',created:'2024-11-15'},
+  {cover:'🍜',name:'Food Diary',slug:'food-diary',owner:'sess_4oYjO9xC7e',count:83,privacy:'Unlisted',created:'2024-12-01'},
+  {cover:'✈️',name:'Travel 2024',slug:'travel-2024',owner:'sess_1pUhA3vM8z',count:141,privacy:'Public',created:'2024-11-10'},
+  {cover:'🎭',name:'Events Archive',slug:'events-archive',owner:'sess_6rWbN2qF9d',count:66,privacy:'Private',created:'2024-11-05'},
+];
+
+let MOCK_ADS=[
+  {type:'Banner Ad',title:'Summer Sale',dest:'https://shop.example.com',img:'',pos:'Top of Page',pri:9,status:true},
+  {type:'Affiliate Link',title:'ImgBB Pro',dest:'https://imgbb.com',img:'',pos:'Sidebar',pri:7,status:true},
+  {type:'Donation CTA',title:'Support Imgify',dest:'https://paypal.com',img:'',pos:'Footer',pri:5,status:true},
+  {type:'Banner Ad',title:'VPS Hosting',dest:'https://digitalocean.com',img:'',pos:'Below Upload',pri:8,status:false},
+];
+
+const REDIRECT_LINKS=[
+  {key:'tosLink',label:'Terms of Service',desc:'Shown in footer Legal column and mobile sidebar'},
+  {key:'privacyLink',label:'Privacy Policy',desc:'Linked from footer and upload consent'},
+  {key:'cookiePolicyLink',label:'Cookie Policy',desc:'Shown in cookie consent banner'},
+  {key:'reportAbuseLink',label:'Report Abuse',desc:'Linked in image view report button'},
+  {key:'apiDocsLink',label:'API Docs',desc:'Linked from developer/footer section'},
+];
+
+/* ══════════════════════════════════════════════════════
+   AUTH
+══════════════════════════════════════════════════════ */
+function init(){
+  const saved=localStorage.getItem('imgify_admin_remember');
+  if(saved){
+    const d=JSON.parse(saved);
+    document.getElementById('u-input').value=d.u||'';
+    document.getElementById('p-input').value=d.p||'';
+    document.getElementById('remember-me').checked=true;
+  }
+  if(localStorage.getItem('imgify_admin_auth')==='ok'){
+    showApp();
+  }
+}
+
+function doLogin(){
+  const u=document.getElementById('u-input').value.trim();
+  const p=document.getElementById('p-input').value;
+  const err=document.getElementById('login-err');
+  if(u==='admin'&&p==='imgify2024'){
+    localStorage.setItem('imgify_admin_auth','ok');
+    if(document.getElementById('remember-me').checked){
+      localStorage.setItem('imgify_admin_remember',JSON.stringify({u,p}));
+    } else {
+      localStorage.removeItem('imgify_admin_remember');
+    }
+    showApp();
+  } else {
+    err.style.display='block';
+    const card=document.getElementById('login-card');
+    card.classList.remove('shake');
+    void card.offsetWidth;
+    card.classList.add('shake');
+  }
+}
+document.getElementById('p-input').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
+document.getElementById('u-input').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
+
+function showApp(){
+  document.getElementById('login-screen').style.display='none';
+  const app=document.getElementById('app');
+  app.classList.add('visible');
+  buildTables();
+  initCharts();
+  if(DB_READY)fetchAdminConfig();
+}
+
+function doLogout(){
+  localStorage.removeItem('imgify_admin_auth');
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('login-screen').style.display='flex';
+  toast('Logged out','info');
+}
+
+/* ══════════════════════════════════════════════════════
+   NAVIGATION
+══════════════════════════════════════════════════════ */
+const TITLES={dashboard:'Dashboard',images:'Images',users:'Users / Sessions',albums:'Albums',ads:'Ads Manager',redirect:'Redirect Links',settings:'Settings'};
+
+function navigate(el){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  el.classList.add('active');
+  const sec=el.dataset.sec;
+  document.querySelectorAll('.content').forEach(c=>c.classList.remove('active'));
+  document.getElementById('sec-'+sec).classList.add('active');
+  document.getElementById('page-title').textContent=TITLES[sec]||sec;
+  closeMobileSidebar();
+  if(sec==='dashboard'){initCharts();}
+}
+
+/* ══════════════════════════════════════════════════════
+   SIDEBAR
+══════════════════════════════════════════════════════ */
+let collapsed=false;
+function toggleCollapse(){
+  collapsed=!collapsed;
+  const sb=document.getElementById('sidebar');
+  sb.classList.toggle('collapsed',collapsed);
+  document.querySelector('.collapse-btn').textContent=collapsed?'⟩':'⟨';
+}
+function openMobileSidebar(){
+  document.getElementById('sidebar').classList.add('mobile-open');
+  document.getElementById('overlay').style.display='block';
+}
+function closeMobileSidebar(){
+  document.getElementById('sidebar').classList.remove('mobile-open');
+  document.getElementById('overlay').style.display='none';
+}
+
+/* ══════════════════════════════════════════════════════
+   CHARTS
+══════════════════════════════════════════════════════ */
+let uploadsChart=null,privacyChart=null;
+function initCharts(){
+  const uc=document.getElementById('uploads-chart');
+  const pc=document.getElementById('privacy-chart');
+  if(!uc||!pc)return;
+  if(uploadsChart){uploadsChart.destroy();uploadsChart=null;}
+  if(privacyChart){privacyChart.destroy();privacyChart=null;}
+  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  uploadsChart=new Chart(uc,{
+    type:'line',
+    data:{labels:days,datasets:[{label:'Uploads',data:[1204,987,1543,2210,1876,2634,1921],fill:true,
+      backgroundColor:'rgba(47,93,168,0.08)',borderColor:'#2F5DA8',borderWidth:2.5,
+      pointBackgroundColor:'#2F5DA8',pointRadius:4,tension:.4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{grid:{display:false},ticks:{color:'#6B80A8',font:{size:11}}},
+              y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{color:'#6B80A8',font:{size:11}}}}}
+  });
+  privacyChart=new Chart(pc,{
+    type:'doughnut',
+    data:{labels:['Public','Unlisted','Private'],datasets:[{data:[68,22,10],
+      backgroundColor:['#2F5DA8','#d97706','#6B80A8'],borderWidth:0,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'68%',
+      plugins:{legend:{position:'bottom',labels:{color:'#2A3F6E',font:{size:11},padding:14,usePointStyle:true}}}}
+  });
+}
+
+/* ══════════════════════════════════════════════════════
+   BUILD TABLES
+══════════════════════════════════════════════════════ */
+function buildTables(){
+  buildActivity();
+  buildImages(); /* async — fetches from Firestore */
+  buildSessions();
+  buildAlbums();
+  buildAds();
+  buildRedirectLinks();
+  /* buildImagesCards & buildSessionsCards called after data loads */
+  buildSessionsCards();
+  buildAlbumsCards();
+}
+
+function buildActivity(){
+  const tb=document.getElementById('activity-tbody');
+  tb.innerHTML=MOCK_ACTIVITY.map(r=>`<tr>
+    <td><div class="thumb" style="font-size:1.4rem;display:flex;align-items:center;justify-content:center">${r.thumb}</div></td>
+    <td>${r.name}</td><td class="mono">${r.size}</td>
+    <td><span class="badge ${r.privacy==='Public'?'badge-green':r.privacy==='Unlisted'?'badge-amber':'badge-gray'}">${r.privacy}</span></td>
+    <td class="mono" style="font-size:.78rem">${r.uploaded}</td>
+    <td><span class="badge ${r.status==='active'?'badge-green':'badge-red'}">${r.status}</span></td>
+    <td><span class="action-btn" title="View">👁</span><span class="action-btn del" title="Delete" onclick="toast('Image deleted (mock)','success')">🗑</span></td>
+  </tr>`).join('');
+}
+
+async function buildImages(){
+  const tb=document.getElementById('images-tbody');
+  if(!DB_READY){
+    tb.innerHTML=`<tr><td colspan="12" style="text-align:center;padding:28px;color:var(--tx3)">⚠️ Firebase not configured — fill <code>FIREBASE_CONFIG</code> in the script block.</td></tr>`;
+    buildImagesCards();return;
+  }
+  tb.innerHTML=`<tr><td colspan="12" style="text-align:center;padding:28px;color:var(--tx3)">⏳ Loading from Firestore…</td></tr>`;
+  try{
+    const snap=await db.collection('uploads')
+      .where('deleted','==',false)
+      .orderBy('uploadedAt','desc')
+      .limit(100)
+      .get();
+    _imagesData=snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(!_imagesData.length){
+      tb.innerHTML=`<tr><td colspan="12" style="text-align:center;padding:28px;color:var(--tx3)">No images uploaded yet.</td></tr>`;
+      buildImagesCards();return;
+    }
+    tb.innerHTML=_imagesData.map((r,i)=>`<tr>
+      <td><input type="checkbox" class="img-cb" onchange="checkBulk()"/></td>
+      <td class="mono">${i+1}</td>
+      <td><img class="thumb" src="${r.thumb||r.url||''}" onerror="this.style.opacity=0" style="transition:opacity .2s"/></td>
+      <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.name||''}">${r.name||'—'}</td>
+      <td class="mono" style="font-size:.74rem">${r.slug||'—'}</td>
+      <td class="mono">${r.size||'—'}</td>
+      <td><span class="badge ${r.privacy==='Public'?'badge-green':r.privacy==='Private'||r.privacy==='private'?'badge-gray':'badge-amber'}">${r.privacy||'—'}</span></td>
+      <td style="font-size:.78rem;color:var(--tx3)">${Array.isArray(r.tags)?r.tags.join(', '):r.tags||'—'}</td>
+      <td style="font-size:.78rem">${r.expiry||'Never'}</td>
+      <td class="mono" style="font-size:.76rem">${r.uploadedAt?.toDate?.()?.toLocaleDateString('en-GB')||r.uploadedAt?.split?.('T')?.[0]||'—'}</td>
+      <td>${(r.views||0).toLocaleString()}</td>
+      <td>
+        <a href="${r.url||'#'}" target="_blank" class="action-btn" title="View Image">👁</a>
+        <span class="action-btn" title="Copy URL" onclick="navigator.clipboard.writeText('${(r.url||'').replace(/'/g,"\\'")}');toast('URL copied!','success')">📋</span>
+        <span class="action-btn del" title="Soft-delete" onclick="deleteImage('${r.id}','${r.slug||''}')">🗑</span>
+      </td>
+    </tr>`).join('');
+    buildImagesCards();
+  }catch(e){
+    /* Firestore index missing? Fallback without compound query */
+    if(e.code==='failed-precondition'||e.message?.includes('index')){
+      try{
+        const snap2=await db.collection('uploads').orderBy('uploadedAt','desc').limit(100).get();
+        _imagesData=snap2.docs.map(d=>({id:d.id,...d.data()})).filter(r=>!r.deleted);
+        buildImages._fromFallback=true;
+        /* re-render with same logic above using _imagesData */
+        tb.innerHTML=_imagesData.map((r,i)=>`<tr>
+          <td><input type="checkbox" class="img-cb" onchange="checkBulk()"/></td>
+          <td class="mono">${i+1}</td>
+          <td><img class="thumb" src="${r.thumb||r.url||''}" onerror="this.style.opacity=0"/></td>
+          <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.name||'—'}</td>
+          <td class="mono" style="font-size:.74rem">${r.slug||'—'}</td>
+          <td class="mono">${r.size||'—'}</td>
+          <td><span class="badge ${r.privacy==='Public'?'badge-green':r.privacy==='Private'||r.privacy==='private'?'badge-gray':'badge-amber'}">${r.privacy||'—'}</span></td>
+          <td style="font-size:.78rem;color:var(--tx3)">${Array.isArray(r.tags)?r.tags.join(', '):r.tags||'—'}</td>
+          <td style="font-size:.78rem">${r.expiry||'Never'}</td>
+          <td class="mono" style="font-size:.76rem">${r.uploadedAt?.toDate?.()?.toLocaleDateString('en-GB')||r.uploadedAt?.split?.('T')?.[0]||'—'}</td>
+          <td>${(r.views||0).toLocaleString()}</td>
+          <td>
+            <a href="${r.url||'#'}" target="_blank" class="action-btn">👁</a>
+            <span class="action-btn" onclick="navigator.clipboard.writeText('${(r.url||'').replace(/'/g,"\\'")}');toast('URL copied!','success')">📋</span>
+            <span class="action-btn del" onclick="deleteImage('${r.id}','${r.slug||''}')">🗑</span>
+          </td>
+        </tr>`).join('');
+        buildImagesCards();
+        toast('ℹ️ Firestore index missing — create composite index for best performance','info');
+      }catch(e2){tb.innerHTML=`<tr><td colspan="12" style="text-align:center;padding:28px;color:var(--red)">❌ ${e2.message}</td></tr>`;}
+    }else{
+      tb.innerHTML=`<tr><td colspan="12" style="text-align:center;padding:28px;color:var(--red)">❌ Firestore error: ${e.message}</td></tr>`;
+    }
+  }
+}
+
+function buildSessions(){
+  const tb=document.getElementById('sessions-tbody');
+  tb.innerHTML=MOCK_SESSIONS.map(r=>`<tr style="${r.status==='banned'?'background:var(--redl)':''}">
+    <td class="mono" style="font-size:.74rem">${r.id.slice(0,16)}…</td>
+    <td class="mono" style="font-size:.76rem">${r.first}</td>
+    <td class="mono" style="font-size:.76rem">${r.last}</td>
+    <td>${r.uploads}</td>
+    <td class="mono">${r.size}</td>
+    <td style="font-size:.78rem;color:var(--tx3)">${r.browser}</td>
+    <td><span class="badge ${r.status==='active'?'badge-green':r.status==='banned'?'badge-red':'badge-gray'}">${r.status}</span></td>
+    <td>
+      <span class="action-btn" title="View Images">🖼️</span>
+      <span class="action-btn del" title="Ban" onclick="banSession(this,'${r.id}')">🚫</span>
+    </td>
+  </tr>`).join('');
+}
+
+function banSession(btn,id){
+  const row=btn.closest('tr');
+  row.style.background='var(--redl)';
+  row.querySelector('.badge').className='badge badge-red';
+  row.querySelector('.badge').textContent='banned';
+  toast('Session banned (mock)','success');
+}
+
+function buildAlbums(){
+  const tb=document.getElementById('albums-tbody');
+  tb.innerHTML=MOCK_ALBUMS.map(r=>`<tr>
+    <td><div class="thumb" style="font-size:1.4rem;display:flex;align-items:center;justify-content:center">${r.cover}</div></td>
+    <td style="font-weight:600">${r.name}</td>
+    <td class="mono" style="font-size:.76rem">${r.slug}</td>
+    <td class="mono" style="font-size:.72rem">${r.owner.slice(0,12)}…</td>
+    <td>${r.count}</td>
+    <td><span class="badge ${r.privacy==='Public'?'badge-green':r.privacy==='Unlisted'?'badge-amber':'badge-gray'}">${r.privacy}</span></td>
+    <td class="mono" style="font-size:.76rem">${r.created}</td>
+    <td>
+      <span class="action-btn">👁</span>
+      <span class="action-btn" onclick="openAlbumModal('${r.name}')">✏️</span>
+      <span class="action-btn del" onclick="confirmAction('Delete album &ldquo;${r.name}&rdquo;?','deleteAlbum')">🗑</span>
+    </td>
+  </tr>`).join('');
+}
+
+function buildAds(){
+  const tb=document.getElementById('ads-tbody');
+  tb.innerHTML=MOCK_ADS.map((a,i)=>`<tr>
+    <td><div class="ad-preview-img" style="display:flex;align-items:center;justify-content:center;font-size:1.1rem">📢</div></td>
+    <td><span class="badge ${a.type==='Banner Ad'?'badge-blue':a.type==='Affiliate Link'?'badge-purple':'badge-amber'}">${a.type}</span></td>
+    <td style="font-weight:500">${a.title}</td>
+    <td style="font-size:.78rem;color:var(--ac);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.dest}</td>
+    <td style="font-size:.8rem">${a.pos}</td>
+    <td>${a.pri}</td>
+    <td>
+      <label class="toggle-switch" style="scale:.85">
+        <input type="checkbox" ${a.status?'checked':''} onchange="MOCK_ADS[${i}].status=this.checked;toast('Ad status updated','success')"/>
+        <div class="toggle-track"></div><div class="toggle-thumb"></div>
+      </label>
+    </td>
+    <td>
+      <span class="action-btn" onclick="openAdModal()">✏️</span>
+      <span class="action-btn del" onclick="MOCK_ADS.splice(${i},1);buildAds();buildAdsCards();toast('Ad deleted','success')">🗑</span>
+    </td>
+  </tr>`).join('');
+  buildAdsCards();
+}
+
+/* ══════════════════════════════════════════════════════
+   VIEW TOGGLE
+══════════════════════════════════════════════════════ */
+const VIEW_STATE={images:'list',sessions:'list',albums:'list',ads:'list'};
+const VT_PREFIX={images:'img',sessions:'sess',albums:'alb',ads:'ads'};
+
+function setView(section,mode){
+  VIEW_STATE[section]=mode;
+  const listEl=document.getElementById(section+'-list-view');
+  const cardEl=document.getElementById(section+'-card-view');
+  const pfx=VT_PREFIX[section];
+  const listBtn=document.getElementById(pfx+'-vt-list');
+  const cardBtn=document.getElementById(pfx+'-vt-card');
+  if(listEl)listEl.style.display=mode==='list'?'':'none';
+  if(cardEl)cardEl.style.display=mode==='card'?'grid':'none';
+  if(listBtn)listBtn.classList.toggle('active',mode==='list');
+  if(cardBtn)cardBtn.classList.toggle('active',mode==='card');
+}
+
+async function buildImagesCards(){
+  const g=document.getElementById('images-card-view');
+  if(!g)return;
+  const src=_imagesData.length?_imagesData:[];
+  if(!src.length){
+    g.innerHTML=DB_READY
+      ?'<p style="padding:20px;color:var(--tx3)">No images to display.</p>'
+      :'<p style="padding:20px;color:var(--tx3)">⚠️ Firebase not configured.</p>';
+    return;
+  }
+  g.innerHTML=src.map(r=>`
+    <div class="img-card">
+      <div class="img-card-thumb">
+        <img src="${r.thumb||r.url||''}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'"/>
+      </div>
+      <div class="img-card-body">
+        <div class="img-card-name" title="${r.name||''}">${r.name||'—'}</div>
+        <div class="img-card-meta">
+          <span class="badge ${r.privacy==='Public'?'badge-green':r.privacy==='Private'||r.privacy==='private'?'badge-gray':'badge-amber'}" style="font-size:.65rem">${r.privacy||'—'}</span>
+          <span>${r.size||''}</span>
+          <span>👁 ${(r.views||0).toLocaleString()}</span>
+        </div>
+        <div class="img-card-meta" style="margin-bottom:6px">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--tx3)">${r.slug||'—'}</span>
+        </div>
+        <div class="img-card-actions">
+          <a href="${r.url||'#'}" target="_blank" class="action-btn" title="View">👁</a>
+          <span class="action-btn" title="Copy URL" onclick="navigator.clipboard.writeText('${(r.url||'').replace(/'/g,"\\'")}');toast('URL copied!','success')">📋</span>
+          <span class="action-btn del" title="Delete" onclick="deleteImage('${r.id}','${r.slug||''}')">🗑</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ── DELETE IMAGE (soft delete in Firestore) ── */
+async function deleteImage(id,slug){
+  if(!DB_READY){toast('Firebase not configured','error');return;}
+  if(!id){toast('Invalid image ID','error');return;}
+  try{
+    await db.collection('uploads').doc(id).update({deleted:true});
+    if(slug){
+      await db.collection('customSlugs').doc(slug).delete().catch(()=>{});
+    }
+    toast('Image deleted','success');
+    /* Refresh images tab */
+    buildImages();
+  }catch(e){toast('Delete failed: '+e.message,'error');}
+}
+
+/* ── FETCH ADMIN CONFIG from Firestore ── */
+async function fetchAdminConfig(){
+  try{
+    const snap=await db.collection('config').doc('siteSettings').get();
+    if(!snap.exists)return;
+    const d=snap.data();
+    /* Best-effort populate settings inputs */
+    if(d.imgbbKey){const el=document.getElementById('imgbb-key');if(el)el.value=d.imgbbKey;}
+  }catch(e){console.warn('[Imgify Admin] Config fetch:',e);}
+}
+
+function buildSessionsCards(){
+  const g=document.getElementById('sessions-card-view');
+  if(!g)return;
+  g.innerHTML=MOCK_SESSIONS.map(r=>`
+    <div class="sess-card${r.status==='banned'?' banned':''}">
+      <div class="sess-card-id">${r.id}</div>
+      <div class="sess-card-stat"><span>Uploads</span><span>${r.uploads}</span></div>
+      <div class="sess-card-stat"><span>Total Size</span><span>${r.size}</span></div>
+      <div class="sess-card-stat"><span>Browser</span><span style="font-size:.72rem">${r.browser}</span></div>
+      <div class="sess-card-stat"><span>Last Active</span><span>${r.last}</span></div>
+      <div class="sess-card-foot">
+        <span class="badge ${r.status==='active'?'badge-green':r.status==='banned'?'badge-red':'badge-gray'}">${r.status}</span>
+        <div style="display:flex;gap:5px">
+          <span class="action-btn" title="View Images">🖼️</span>
+          <span class="action-btn del" title="Ban" onclick="toast('Session banned (mock)','success')">🚫</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function buildAlbumsCards(){
+  const g=document.getElementById('albums-card-view');
+  if(!g)return;
+  g.innerHTML=MOCK_ALBUMS.map(r=>`
+    <div class="alb-card">
+      <div class="alb-card-cover">${r.cover}</div>
+      <div class="alb-card-body">
+        <div class="alb-card-name">${r.name}</div>
+        <div class="alb-card-meta">${r.count} images · ${r.created}</div>
+        <div class="alb-card-foot">
+          <span class="badge ${r.privacy==='Public'?'badge-green':r.privacy==='Unlisted'?'badge-amber':'badge-gray'}" style="font-size:.65rem">${r.privacy}</span>
+          <div style="display:flex;gap:5px">
+            <span class="action-btn">👁</span>
+            <span class="action-btn" onclick="openAlbumModal('${r.name}')">✏️</span>
+            <span class="action-btn del" onclick="confirmAction('Delete album &ldquo;${r.name}&rdquo;?','deleteAlbum')">🗑</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function buildAdsCards(){
+  const g=document.getElementById('ads-card-view');
+  if(!g)return;
+  g.innerHTML=MOCK_ADS.map((a,i)=>`
+    <div class="ad-card">
+      <div class="ad-card-icon">📢</div>
+      <div class="ad-card-title">${a.title}</div>
+      <div class="ad-card-dest">${a.dest}</div>
+      <div class="ad-card-row">
+        <span class="badge ${a.type==='Banner Ad'?'badge-blue':a.type==='Affiliate Link'?'badge-purple':'badge-amber'}" style="font-size:.65rem">${a.type}</span>
+        <span style="font-size:.75rem;color:var(--tx3)">${a.pos}</span>
+      </div>
+      <div class="ad-card-foot">
+        <label class="toggle-switch" style="scale:.85;transform-origin:left">
+          <input type="checkbox" ${a.status?'checked':''} onchange="MOCK_ADS[${i}].status=this.checked;toast('Ad status updated','success')"/>
+          <div class="toggle-track"></div><div class="toggle-thumb"></div>
+        </label>
+        <div style="display:flex;gap:5px">
+          <span class="action-btn" onclick="openAdModal()">✏️</span>
+          <span class="action-btn del" onclick="MOCK_ADS.splice(${i},1);buildAds();toast('Ad deleted','success')">🗑</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function buildRedirectLinks(){
+  const container=document.getElementById('redirect-links-list');
+  container.innerHTML=REDIRECT_LINKS.map(l=>`
+    <div class="rlink-row">
+      <div class="rlink-info">
+        <div class="rlink-label">${l.label}</div>
+        <div class="rlink-desc">${l.desc}</div>
+      </div>
+      <input class="rlink-input" id="rl-${l.key}" type="text" placeholder="https://..." oninput="updateRlinkBadge('${l.key}')"/>
+      <span class="badge badge-gray" id="rl-badge-${l.key}">Not Set</span>
+      <div class="rlink-actions">
+        <button class="btn btn-primary btn-xs" onclick="saveLink('${l.key}')">Save</button>
+        <button class="btn btn-ghost btn-xs" onclick="clearLink('${l.key}')">Clear</button>
+      </div>
+    </div>
+  `).join('')+`
+    <!-- Contact Icons -->
+    <div class="rlink-row" style="flex-direction:column;align-items:flex-start">
+      <div class="rlink-info" style="flex:none;margin-bottom:14px">
+        <div class="rlink-label">Contact Icons</div>
+        <div class="rlink-desc">Shown in footer contact section; each entry = icon + link</div>
+      </div>
+      <div id="contact-icons-list" style="width:100%"></div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn btn-ghost btn-sm" onclick="addContactIcon()">+ Add Contact Method</button>
+        <button class="btn btn-primary btn-sm" onclick="toast('Contact icons saved (mock)','success')">Save Icons</button>
+      </div>
+    </div>
+  `;
+  renderContactIcons();
+}
+
+let contactIcons=[{iconUrl:'',contactUrl:'',label:'Twitter'},{iconUrl:'',contactUrl:'',label:'GitHub'}];
+function renderContactIcons(){
+  const list=document.getElementById('contact-icons-list');
+  if(!list)return;
+  list.innerHTML=contactIcons.map((ic,i)=>`
+    <div class="contact-icon-entry" style="margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <img class="icon-preview-img" id="ci-prev-${i}" src="${ic.iconUrl||''}" onerror="this.src=''"/>
+      <input type="text" placeholder="Icon Image URL" value="${ic.iconUrl}" style="flex:1;min-width:140px;padding:7px 10px;border:1.5px solid var(--bdr);border-radius:var(--rsm);font-family:'DM Sans',sans-serif;font-size:.82rem;background:var(--bg2);color:var(--tx);outline:none" oninput="contactIcons[${i}].iconUrl=this.value;document.getElementById('ci-prev-${i}').src=this.value"/>
+      <input type="text" placeholder="Contact URL" value="${ic.contactUrl}" style="flex:1;min-width:140px;padding:7px 10px;border:1.5px solid var(--bdr);border-radius:var(--rsm);font-family:'DM Sans',sans-serif;font-size:.82rem;background:var(--bg2);color:var(--tx);outline:none" oninput="contactIcons[${i}].contactUrl=this.value"/>
+      <input type="text" placeholder="Label" value="${ic.label}" style="width:90px;padding:7px 10px;border:1.5px solid var(--bdr);border-radius:var(--rsm);font-family:'DM Sans',sans-serif;font-size:.82rem;background:var(--bg2);color:var(--tx);outline:none" oninput="contactIcons[${i}].label=this.value"/>
+      <button class="btn btn-danger btn-xs" onclick="contactIcons.splice(${i},1);renderContactIcons()">✕</button>
+    </div>
+  `).join('');
+}
+function addContactIcon(){contactIcons.push({iconUrl:'',contactUrl:'',label:''});renderContactIcons();}
+
+function updateRlinkBadge(key){
+  const val=document.getElementById('rl-'+key).value.trim();
+  const badge=document.getElementById('rl-badge-'+key);
+  badge.textContent=val?'Set ✓':'Not Set';
+  badge.className='badge '+(val?'badge-green':'badge-gray');
+}
+function saveLink(key){toast(key+' saved!','success')}
+function clearLink(key){document.getElementById('rl-'+key).value='';updateRlinkBadge(key);}
+function saveAllLinks(){toast('All links saved (mock)','success')}
+
+/* ══════════════════════════════════════════════════════
+   MODALS
+══════════════════════════════════════════════════════ */
+function openAlbumModal(prefill){
+  const m=document.getElementById('album-modal');
+  document.getElementById('album-modal-title').textContent=prefill?'Edit Album':'Create Album';
+  if(prefill){document.getElementById('alb-name').value=prefill;}
+  else{['alb-name','alb-desc','alb-cover'].forEach(id=>document.getElementById(id).value='');}
+  m.classList.add('open');
+}
+function saveAlbum(){
+  const name=document.getElementById('alb-name').value.trim();
+  if(!name){toast('Album name required','error');return;}
+  closeModal(document.getElementById('album-modal'));
+  toast('Album saved (mock)','success');
+}
+function openAdModal(){
+  document.getElementById('ad-modal').classList.add('open');
+}
+function saveAd(){
+  const title=document.getElementById('ad-title').value.trim();
+  if(!title){toast('Ad title required','error');return;}
+  MOCK_ADS.push({
+    type:document.getElementById('ad-type').value,
+    title,dest:document.getElementById('ad-dest').value,
+    img:document.getElementById('ad-img').value,
+    pos:document.getElementById('ad-pos').value,
+    pri:parseInt(document.getElementById('ad-pri').value)||5,
+    status:document.getElementById('ad-status').checked
+  });
+  buildAds();
+  closeModal(document.getElementById('ad-modal'));
+  toast('Ad saved (mock)','success');
+}
+function closeModal(modal,e){
+  if(e&&e.target!==modal)return;
+  modal.classList.remove('open');
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.querySelectorAll('.mov.open').forEach(m=>m.classList.remove('open'));}});
+
+let _confirmCb=null;
+function confirmAction(msg,action){
+  document.getElementById('confirm-msg').innerHTML=msg;
+  _confirmCb=action;
+  document.getElementById('confirm-modal').classList.add('open');
+  document.getElementById('confirm-ok-btn').onclick=()=>{
+    document.getElementById('confirm-modal').classList.remove('open');
+    if(action==='clearSessions'){toast('Session data cleared (mock)','success');}
+    else if(action==='resetSettings'){toast('Settings reset (mock)','success');}
+    else if(action==='deleteAlbum'){buildAlbums();toast('Album deleted (mock)','success');}
+  };
+}
+
+/* ══════════════════════════════════════════════════════
+   SETTINGS ACCORDIONS
+══════════════════════════════════════════════════════ */
+function toggleAcc(head){
+  const body=head.nextElementSibling;
+  const isOpen=body.classList.contains('open');
+  body.classList.toggle('open',!isOpen);
+  head.classList.toggle('open',!isOpen);
+}
+
+/* ══════════════════════════════════════════════════════
+   UTILITIES
+══════════════════════════════════════════════════════ */
+function togglePw(id,eye){
+  const inp=document.getElementById(id);
+  inp.type=inp.type==='password'?'text':'password';
+  eye.textContent=inp.type==='password'?'👁':'🙈';
+}
+function updatePreview(inputId,prevId){
+  document.getElementById(prevId).src=document.getElementById(inputId).value;
+}
+function toggleSelectAll(cb){
+  document.querySelectorAll('.img-cb').forEach(c=>c.checked=cb.checked);
+  checkBulk();
+}
+function checkBulk(){
+  const any=[...document.querySelectorAll('.img-cb')].some(c=>c.checked);
+  document.getElementById('bulk-delete-btn').style.display=any?'flex':'none';
+}
+function exportMockJson(){
+  const data=_imagesData.length?_imagesData:MOCK_IMAGES;
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='imgify-images-export.json';
+  a.click();
+  toast(`Exported ${data.length} records`,'success');
+}
+
+/* ══════════════════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════════════════ */
+function toast(msg,type='info'){
+  const icons={success:'✅',error:'❌',info:'ℹ️'};
+  const el=document.createElement('div');
+  el.className=`toast ${type}`;
+  el.innerHTML=`<span class="toast-icon">${icons[type]}</span><span>${msg}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(()=>{el.classList.add('toast-out');setTimeout(()=>el.remove(),300)},2800);
+}
+
+/* BOOT */
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Imgify — Host Images. Share Link. No account needed.</title>
+<meta name="description" content="Upload images instantly, get shareable links, QR codes, and embed codes. No signup required. Free forever."/>
+<meta property="og:title" content="Imgify — Host Images. Share Link. No account needed."/>
+<meta property="og:type" content="website"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&family=Dancing+Script:wght@700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+/* ═══════════════════════════════════════
+   VARIABLES — Cyan, both-theme safe
+═══════════════════════════════════════ */
+:root{
+  --ac:#2F5DA8; --acd:#1A3D7A; --acl:#EBF2FF; --acg:rgba(47,93,168,.11);
+  --bg:#fff; --bg2:#F0F4FB; --bg3:#E3EAF8;
+  --bdr:rgba(0,0,0,.08); --bdr2:rgba(47,93,168,.26);
+  --tx:#0C1F3F; --tx2:#2A3F6E; --tx3:#6B80A8;
+  --grn:#16a34a; --grnl:#f0fdf4; --red:#dc2626; --redl:#fef2f2; --amb:#d97706;
+  --shsm:0 1px 3px rgba(0,0,0,.06); --shmd:0 4px 16px rgba(0,0,0,.07);
+  --shlg:0 20px 60px rgba(0,0,0,.09),0 4px 16px rgba(0,0,0,.05);
+  --shac:0 8px 28px rgba(47,93,168,.28);
+  --glbg:rgba(255,255,255,.78); --glbl:blur(18px);
+  --glsh:0 8px 32px rgba(47,93,168,.08),0 1px 0 rgba(255,255,255,.9) inset;
+  --r:16px; --rsm:10px; --rlg:22px; --rxl:30px;
+  --fd:'Playfair Display',Georgia,serif; --fb:'DM Sans',sans-serif; --fm:'JetBrains Mono',monospace;
+  --tr:.22s cubic-bezier(.4,0,.2,1);
+  --fbot-bg:#fff;
+}
+/* ═══════════════════════════════════════
+   RESET
+═══════════════════════════════════════ */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:var(--fb);background:var(--bg);color:var(--tx);line-height:1.6;-webkit-font-smoothing:antialiased;transition:background var(--tr),color var(--tr);min-height:100vh;overflow-x:hidden;}
+img{max-width:100%;display:block;}
+button{cursor:pointer;font-family:var(--fb);border:none;background:none;}
+input,textarea,select{font-family:var(--fb);}
+a{text-decoration:none;color:inherit;}
+
+/* ═══════════════════════════════════════
+   SKELETON
+═══════════════════════════════════════ */
+#sko{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;padding:24px;transition:opacity .5s,visibility .5s;}
+#sko.hide{opacity:0;visibility:hidden;pointer-events:none;}
+.sk-hd{width:100%;max-width:1160px;display:flex;align-items:center;justify-content:space-between;margin-bottom:64px;}
+.sk-l{width:90px;height:26px;border-radius:6px;background:var(--bg3);animation:skp 1.4s ease-in-out infinite;}
+.sk-n{display:flex;gap:10px;}
+.sk-n span{width:54px;height:17px;border-radius:4px;background:var(--bg3);animation:skp 1.4s ease-in-out infinite;}
+.sk-n span:nth-child(2){animation-delay:.1s;}.sk-n span:nth-child(3){animation-delay:.2s;}
+.sk-hr{text-align:center;width:100%;max-width:660px;display:flex;flex-direction:column;align-items:center;gap:13px;}
+.sk-b{width:190px;height:27px;border-radius:20px;background:var(--bg3);animation:skp 1.4s ease-in-out infinite;}
+.sk-h1{width:78%;height:50px;border-radius:8px;background:var(--bg3);animation:skp 1.4s ease-in-out infinite;animation-delay:.1s;}
+.sk-h2{width:55%;height:50px;border-radius:8px;background:var(--bg3);animation:skp 1.4s ease-in-out infinite;animation-delay:.15s;}
+.sk-s{width:48%;height:17px;border-radius:4px;background:var(--bg3);animation:skp 1.4s ease-in-out infinite;animation-delay:.2s;}
+.sk-bx{width:100%;max-width:620px;height:170px;border-radius:20px;background:var(--bg3);animation:skp 1.4s ease-in-out infinite;margin-top:8px;animation-delay:.25s;}
+@keyframes skp{0%,100%{opacity:.45;}50%{opacity:1;}}
+
+/* ═══════════════════════════════════════
+   COOKIE BANNER
+═══════════════════════════════════════ */
+#ck{position:fixed;bottom:0;left:0;right:0;z-index:8000;background:var(--glbg);backdrop-filter:var(--glbl);border-top:1px solid var(--bdr);box-shadow:0 -4px 24px rgba(0,0,0,.08);padding:13px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;transform:translateY(100%);transition:transform .4s cubic-bezier(.4,0,.2,1);}
+#ck.show{transform:translateY(0);}
+#ck p{font-size:13.5px;color:var(--tx2);flex:1;min-width:180px;}
+#ck a{color:var(--ac);text-decoration:underline;}
+.ck-btns{display:flex;gap:8px;}
+.ck-acc{padding:7px 18px;border-radius:8px;background:var(--ac);color:#fff;font-size:13px;font-weight:600;transition:background var(--tr);}
+.ck-acc:hover{background:var(--acd);}
+.ck-dec{padding:7px 13px;border-radius:8px;border:1px solid var(--bdr);color:var(--tx3);font-size:13px;transition:all var(--tr);}
+.ck-dec:hover{border-color:var(--bdr2);color:var(--tx);}
+
+/* ═══════════════════════════════════════
+   BANNERS
+═══════════════════════════════════════ */
+#mb{background:linear-gradient(90deg,var(--amb),#f59e0b);color:#fff;text-align:center;padding:10px 20px;font-size:13.5px;font-weight:600;display:none;}
+#mb.show{display:block;}
+#ab{background:var(--acl);border-bottom:1px solid var(--bdr2);color:var(--acd);text-align:center;padding:9px 20px;font-size:13px;font-weight:500;display:none;}
+#ab.show{display:block;}
+
+/* ═══════════════════════════════════════
+   SIDEBAR — mobile only
+═══════════════════════════════════════ */
+#sbo{position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0);pointer-events:none;transition:background .3s;}
+#sbo.open{background:rgba(0,0,0,.45);pointer-events:all;}
+#sb{position:fixed;top:0;left:0;bottom:0;z-index:3001;width:256px;background:var(--bg2);border-right:1px solid var(--bdr);box-shadow:4px 0 24px rgba(0,0,0,.12);transform:translateX(-100%);transition:transform .35s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;}
+#sb.open{transform:translateX(0);}
+.sb-hd{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--bdr);}
+.sb-logo{font-family:var(--fd);font-size:20px;font-weight:700;color:var(--ac);}
+.sb-cls{width:28px;height:28px;border-radius:7px;border:1px solid var(--bdr);background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--tx3);transition:all var(--tr);}
+.sb-cls:hover{border-color:var(--red);color:var(--red);}
+.sb-nav{flex:1;overflow-y:auto;padding:10px 8px;list-style:none;display:flex;flex-direction:column;gap:2px;}
+.sb-nav a{display:flex;align-items:center;gap:10px;padding:10px 13px;border-radius:10px;font-size:13.5px;font-weight:500;color:var(--tx2);transition:all var(--tr);}
+.sb-nav a:hover{background:var(--bg3);color:var(--tx);}
+.sb-nav a.active{background:var(--acl);color:var(--ac);font-weight:600;}
+.sb-nav .si{font-size:16px;width:20px;text-align:center;}
+.sb-ft{padding:14px 18px;border-top:1px solid var(--bdr);font-size:11.5px;color:var(--tx3);}
+
+/* ═══════════════════════════════════════
+   NAVBAR
+═══════════════════════════════════════ */
+.nav{width:100%;padding:0 32px;height:60px;display:flex;align-items:center;gap:24px;border-bottom:1px solid var(--bdr);background:var(--bg);position:relative;z-index:100;}
+.nav-logo{font-family:var(--fd);font-size:21px;font-weight:700;color:var(--ac);letter-spacing:-.3px;margin-right:auto;}
+.nav-links{display:flex;align-items:center;gap:2px;list-style:none;}
+.nav-links a{font-size:13.5px;font-weight:500;color:var(--tx2);padding:6px 11px;border-radius:8px;transition:all var(--tr);}
+.nav-links a:hover{color:var(--tx);background:var(--bg2);}
+.nav-links a.active{color:var(--ac);background:var(--acl);}
+.nav-r{display:flex;align-items:center;gap:7px;}
+.ibtn{width:36px;height:36px;border-radius:10px;border:1px solid var(--bdr);background:var(--bg2);display:flex;align-items:center;justify-content:center;color:var(--tx2);font-size:16px;transition:all var(--tr);}
+.ibtn:hover{border-color:var(--bdr2);color:var(--ac);background:var(--acl);}
+.hbtn{display:none;}
+@media(max-width:768px){
+  .nav-links{display:none;}
+  .hbtn{display:flex;}
+  .nav{padding:0 14px;height:54px;}
+}
+
+/* ═══════════════════════════════════════
+   TOAST
+═══════════════════════════════════════ */
+#tc{position:fixed;top:74px;right:16px;z-index:9000;display:flex;flex-direction:column;gap:7px;pointer-events:none;}
+.toast{background:var(--glbg);backdrop-filter:var(--glbl);border:1px solid var(--bdr);box-shadow:var(--shlg);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:500;min-width:210px;max-width:310px;pointer-events:all;animation:tIn .35s cubic-bezier(.34,1.56,.64,1);}
+.toast.out{animation:tOut .3s ease forwards;}
+.toast.success{border-left:3px solid var(--grn);}
+.toast.error{border-left:3px solid var(--red);}
+.toast.info{border-left:3px solid var(--ac);}
+@keyframes tIn{from{opacity:0;transform:translateX(16px) scale(.95);}to{opacity:1;transform:none;}}
+@keyframes tOut{to{opacity:0;transform:translateX(16px) scale(.95);}}
+
+/* ═══════════════════════════════════════
+   LAYOUT
+═══════════════════════════════════════ */
+.ctr{max-width:1160px;margin:0 auto;padding:0 24px;}
+.sec{padding:88px 0;}
+@media(max-width:768px){.sec{padding:56px 0;}}
+.reveal{opacity:0;transform:translateY(26px);transition:opacity .65s ease,transform .65s ease;}
+.reveal.visible{opacity:1;transform:none;}
+.d1{transition-delay:.1s;}.d2{transition-delay:.2s;}.d3{transition-delay:.3s;}.d4{transition-delay:.4s;}
+
+/* ═══════════════════════════════════════
+   HERO
+═══════════════════════════════════════ */
+.hero{padding:68px 24px 52px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:20px;position:relative;overflow:hidden;}
+.hero::before{content:'';position:absolute;top:-80px;left:50%;transform:translateX(-50%);width:560px;height:560px;background:radial-gradient(circle,rgba(47,93,168,.055) 0%,transparent 70%);pointer-events:none;}
+
+/* Badge */
+.badge{display:inline-flex;align-items:center;gap:7px;padding:6px 15px;border-radius:100px;background:var(--glbg);backdrop-filter:var(--glbl);border:1px solid var(--bdr2);box-shadow:var(--glsh);font-size:12px;font-weight:600;color:var(--ac);letter-spacing:.02em;position:relative;overflow:hidden;animation:bpulse 3s ease-in-out infinite;}
+.badge::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(47,93,168,.1),transparent);transform:translateX(-100%);animation:bshine 3s ease-in-out infinite;}
+.bdot{width:7px;height:7px;border-radius:50%;background:var(--grn);box-shadow:0 0 0 3px rgba(22,163,74,.22);animation:dblink 1.5s ease-in-out infinite;}
+@keyframes bpulse{0%,100%{box-shadow:var(--glsh);}50%{box-shadow:var(--glsh),0 0 20px rgba(47,93,168,.18);}}
+@keyframes bshine{0%{transform:translateX(-100%);}60%,100%{transform:translateX(100%);}}
+@keyframes dblink{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+.hero h1{font-family:var(--fd);font-size:clamp(32px,5.2vw,66px);font-weight:900;line-height:1.09;letter-spacing:-.03em;color:var(--tx);max-width:720px;}
+.hero h1 em{font-style:normal;color:var(--ac);position:relative;}
+.hero h1 em::after{content:'';position:absolute;bottom:-3px;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--ac),rgba(47,93,168,.25));border-radius:2px;}
+.hero-sub{font-size:clamp(14px,1.7vw,17.5px);color:var(--tx2);max-width:490px;line-height:1.65;}
+
+/* Stats bar */
+.stats-bar{display:flex;align-items:center;background:var(--glbg);backdrop-filter:var(--glbl);border:1px solid var(--bdr);border-radius:14px;box-shadow:var(--glsh);overflow:hidden;}
+.si-item{display:flex;flex-direction:column;align-items:center;padding:12px 24px;position:relative;}
+.si-item+.si-item::before{content:'';position:absolute;left:0;top:22%;height:56%;width:1px;background:var(--bdr);}
+.si-num{font-family:var(--fd);font-size:20px;font-weight:700;color:var(--ac);line-height:1;}
+.si-lbl{font-size:10px;color:var(--tx3);font-weight:500;margin-top:2px;letter-spacing:.02em;}
+@media(max-width:500px){.stats-bar{flex-wrap:wrap;max-width:280px;}.si-item{padding:8px 12px;flex:1;min-width:90px;}.si-item+.si-item::before{display:none;}}
+
+/* ═══════════════════════════════════════
+   UPLOAD ZONE (compact, clean)
+═══════════════════════════════════════ */
+.upwrap{width:100%;max-width:660px;margin:0 auto;}
+
+/* Rotating conic-gradient chasing border */
+@property --ba{syntax:'<angle>';initial-value:0deg;inherits:false;}
+@keyframes spinBorder{to{--ba:360deg;}}
+
+.upzone{
+  background:var(--glbg);backdrop-filter:var(--glbl);
+  border-radius:var(--rxl);box-shadow:var(--glsh);
+  padding:32px 24px 26px;text-align:center;cursor:pointer;
+  transition:background .3s,box-shadow .3s;position:relative;
+}
+/* static dashed border */
+.upzone::before{content:'';position:absolute;inset:0;border-radius:var(--rxl);border:2px dashed var(--bdr2);pointer-events:none;transition:opacity .3s;}
+/* spinning RGB ring */
+.upzone::after{
+  content:'';position:absolute;inset:-2px;border-radius:calc(var(--rxl) + 2px);padding:2px;
+  background:conic-gradient(from var(--ba),#ff3366,#ff9900,#ffe600,#00e676,#00e5ff,#2979ff,#d500f9,#ff3366);
+  -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;
+  opacity:0;animation:spinBorder 3s linear infinite;pointer-events:none;transition:opacity .4s ease;
+}
+.upzone:hover::before,.upzone.dov::before{opacity:0;}
+.upzone:hover::after,.upzone.dov::after{opacity:1;}
+.upzone.dov{background:rgba(47,93,168,.04);}
+
+/* Upload icon - SVG cloud */
+.upiw{width:56px;height:56px;border-radius:16px;background:var(--acl);border:1px solid var(--bdr2);display:flex;align-items:center;justify-content:center;margin:0 auto 13px;transition:transform .3s cubic-bezier(.34,1.56,.64,1);}
+.upzone:hover .upiw{transform:translateY(-4px) scale(1.07);}
+.upisv{width:28px;height:28px;fill:none;stroke:var(--ac);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.upzone h3{font-family:var(--fd);font-size:17px;font-weight:700;color:var(--tx);margin-bottom:4px;}
+.upzone p{font-size:12.5px;color:var(--tx3);margin-bottom:14px;line-height:1.5;}
+.upzone p strong{color:var(--tx2);}
+.btnbr{display:inline-flex;align-items:center;gap:7px;padding:9px 20px;border-radius:11px;background:var(--ac);color:#fff;font-size:13.5px;font-weight:600;box-shadow:var(--shac);transition:all var(--tr);}
+.btnbr:hover{background:var(--acd);transform:translateY(-1px);}
+
+/* Below-zone area */
+.bzone{width:100%;max-width:660px;margin:9px auto 0;display:flex;flex-direction:column;gap:8px;}
+.url-row2{display:flex;gap:7px;}
+.url-inp{flex:1;padding:9px 13px;border-radius:10px;border:1px solid var(--bdr);background:var(--bg2);color:var(--tx);font-size:13px;outline:none;transition:border-color var(--tr);}
+.url-inp:focus{border-color:var(--ac);}
+.url-inp::placeholder{color:var(--tx3);}
+.btn-url{padding:9px 15px;border-radius:10px;background:var(--bg3);color:var(--tx2);border:1px solid var(--bdr);font-size:13px;font-weight:600;transition:all var(--tr);white-space:nowrap;}
+.btn-url:hover{border-color:var(--ac);color:var(--ac);background:var(--acl);}
+.specs{display:flex;justify-content:center;flex-wrap:wrap;gap:6px;}
+.chip{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--tx3);background:var(--bg2);border:1px solid var(--bdr);border-radius:20px;padding:3px 9px;}
+.ph{font-size:11px;color:var(--tx3);display:flex;align-items:center;justify-content:center;gap:5px;}
+.pkey{background:var(--bg3);border:1px solid var(--bdr);border-radius:5px;padding:1px 5px;font-family:var(--fm);font-size:9.5px;color:var(--tx2);}
+
+/* ═══════════════════════════════════════
+   PROGRESS
+═══════════════════════════════════════ */
+.prwrap{display:none;width:100%;max-width:660px;margin:9px auto 0;}
+.prwrap.show{display:block;}
+.prtrack{height:4px;background:var(--bg3);border-radius:4px;overflow:hidden;}
+.prfill{height:100%;background:linear-gradient(90deg,var(--ac),#8FAADC);border-radius:4px;width:0%;transition:width .3s ease;}
+.prlbl{display:flex;justify-content:space-between;font-size:11px;color:var(--tx3);margin-top:5px;}
+
+/* ═══════════════════════════════════════
+   OPTIONS PANEL
+═══════════════════════════════════════ */
+.opanel{width:100%;max-width:660px;margin:0 auto;overflow:hidden;max-height:0;transition:max-height .55s cubic-bezier(.4,0,.2,1),opacity .4s ease;opacity:0;}
+.opanel.open{max-height:2600px;opacity:1;}
+.oinner{background:var(--glbg);backdrop-filter:var(--glbl);border:1px solid var(--bdr);border-radius:var(--rlg);box-shadow:var(--glsh);padding:22px;margin-top:10px;overflow:hidden;}
+@media(max-width:420px){.oinner{padding:14px 12px;}}
+.otitle{font-family:var(--fd);font-size:15px;font-weight:700;color:var(--tx);margin-bottom:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.ocnt{margin-left:auto;font-size:11.5px;color:var(--tx3);font-family:var(--fb);font-weight:400;}
+
+/* Thumbs */
+.tgrid{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px;}
+.tthumb{width:62px;height:62px;border-radius:9px;overflow:hidden;position:relative;border:2px solid transparent;cursor:pointer;transition:border-color var(--tr);flex-shrink:0;}
+.tthumb img{width:100%;height:100%;object-fit:cover;}
+.trm{position:absolute;top:2px;right:2px;width:15px;height:15px;border-radius:50%;background:rgba(220,38,38,.85);color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity var(--tr);}
+.tthumb:hover .trm{opacity:1;}
+.tthumb.active{border-color:var(--ac);}
+
+/* Opt grid */
+.ogrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(max-width:660px){.ogrid{grid-template-columns:1fr;}}
+.ofield{display:flex;flex-direction:column;gap:5px;min-width:0;overflow:hidden;}
+.ofield.full{grid-column:1/-1;min-width:0;overflow:hidden;}
+.olbl{font-size:10.5px;font-weight:700;color:var(--tx3);letter-spacing:.06em;text-transform:uppercase;}
+.oinp{padding:8px 11px;border-radius:9px;border:1px solid var(--bdr);background:var(--bg2);color:var(--tx);font-size:13px;outline:none;transition:border-color var(--tr);width:100%;}
+.oinp:focus{border-color:var(--ac);}
+.oinp::placeholder{color:var(--tx3);}
+select.oinp{cursor:pointer;}
+
+/* Slider */
+.slrow{display:flex;align-items:center;gap:9px;}
+.qs{flex:1;-webkit-appearance:none;appearance:none;height:4px;border-radius:4px;background:var(--bg3);outline:none;}
+.qs::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--ac);cursor:pointer;box-shadow:0 2px 8px rgba(47,93,168,.3);}
+.qv{font-family:var(--fm);font-size:11.5px;color:var(--ac);font-weight:600;min-width:32px;text-align:center;}
+
+/* Tags */
+.tgwrap{display:flex;flex-wrap:wrap;gap:5px;align-items:center;padding:7px 9px;border-radius:9px;border:1px solid var(--bdr);background:var(--bg2);min-height:38px;cursor:text;transition:border-color var(--tr);}
+.tgwrap:focus-within{border-color:var(--ac);}
+.tgchip{display:flex;align-items:center;gap:4px;padding:2px 9px;border-radius:20px;background:var(--acl);color:var(--ac);font-size:11.5px;font-weight:600;}
+.tgchip button{background:none;border:none;color:var(--ac);font-size:10.5px;cursor:pointer;}
+.tginp{border:none;background:none;outline:none;color:var(--tx);font-size:13px;font-family:var(--fb);min-width:70px;flex:1;}
+
+/* Editor */
+.edrow{display:flex;gap:6px;flex-wrap:wrap;width:100%;}
+.edbtn{padding:6px 11px;border-radius:7px;border:1px solid var(--bdr);background:var(--bg2);font-size:11.5px;font-weight:600;color:var(--tx2);transition:all var(--tr);}
+.edbtn:hover{border-color:var(--ac);color:var(--ac);background:var(--acl);}
+
+/* Privacy */
+.pvrow{display:flex;gap:6px;width:100%;}
+.pvopt{flex:1;min-width:0;padding:8px 5px;border-radius:9px;border:1px solid var(--bdr);background:var(--bg2);text-align:center;cursor:pointer;transition:all var(--tr);font-size:11.5px;font-weight:600;color:var(--tx2);overflow:hidden;}
+.pvopt:hover{border-color:var(--bdr2);}
+.pvopt.sel{border-color:var(--ac);background:var(--acl);color:var(--ac);}
+.pvopt .pi{font-size:14px;display:block;margin-bottom:2px;}
+
+/* Slug */
+.slgwrap{display:flex;align-items:center;border:1px solid var(--bdr);border-radius:9px;overflow:hidden;background:var(--bg2);width:100%;}
+.slgpfx{padding:8px 10px;background:var(--bg3);color:var(--tx3);font-size:10.5px;font-family:var(--fm);border-right:1px solid var(--bdr);white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;}
+@media(max-width:400px){.slgpfx{max-width:100px;}}
+.slginp{flex:1;padding:8px 11px;border:none;background:none;color:var(--tx);font-size:12.5px;outline:none;font-family:var(--fm);}
+.slginp::placeholder{color:var(--tx3);}
+
+/* Upload btn */
+.btnup{width:100%;padding:12px;border-radius:11px;background:linear-gradient(135deg,var(--ac),var(--acd));color:#fff;font-size:14px;font-weight:700;box-shadow:var(--shac);transition:all var(--tr);margin-top:16px;border:none;cursor:pointer;letter-spacing:.01em;}
+.btnup:hover{transform:translateY(-2px);box-shadow:0 14px 36px rgba(47,93,168,.35);}
+.btnup:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+
+/* ═══════════════════════════════════════
+   RESULT PANEL
+═══════════════════════════════════════ */
+.rsec{width:100%;max-width:660px;margin:16px auto 0;display:none;}
+.rsec.show{display:block;}
+.rhdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;flex-wrap:wrap;gap:8px;}
+.rtitle{font-family:var(--fd);font-size:17px;font-weight:700;color:var(--tx);}
+.racts{display:flex;gap:7px;align-items:center;}
+.rcards{display:grid;gap:13px;}
+.rcard{background:var(--glbg);backdrop-filter:var(--glbl);border:1px solid var(--bdr);border-radius:var(--rlg);box-shadow:var(--glsh);overflow:hidden;}
+.rthrow{display:flex;gap:13px;padding:16px;align-items:flex-start;}
+.rthumb{width:68px;height:68px;border-radius:9px;overflow:hidden;flex-shrink:0;border:1px solid var(--bdr);}
+.rthumb img{width:100%;height:100%;object-fit:cover;}
+.rmeta{flex:1;min-width:0;}
+.riname{font-weight:700;font-size:13px;color:var(--tx);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rimeta{font-size:11px;color:var(--tx3);}
+.rcpall{padding:6px 12px;border-radius:7px;background:var(--ac);color:#fff;font-size:11.5px;font-weight:600;transition:background var(--tr);flex-shrink:0;}
+.rcpall:hover{background:var(--acd);}
+.ufmts{padding:0 16px 16px;display:grid;gap:6px;}
+.ufrow{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--bdr);border-radius:9px;padding:8px 10px;}
+.uftbdg{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ac);background:var(--acl);border-radius:4px;padding:2px 7px;flex-shrink:0;min-width:64px;text-align:center;}
+.ufval{flex:1;font-family:var(--fm);font-size:10.5px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ucpbtn{padding:4px 8px;border-radius:6px;background:var(--bg3);border:1px solid var(--bdr);font-size:10.5px;font-weight:600;color:var(--tx3);transition:all var(--tr);flex-shrink:0;}
+.ucpbtn:hover{border-color:var(--ac);color:var(--ac);background:var(--acl);}
+.ucpbtn.cped{border-color:var(--grn);color:var(--grn);background:var(--grnl);}
+/* QR */
+.qrsec{padding:14px 16px;border-top:1px solid var(--bdr);display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:start;}
+@media(max-width:440px){.qrsec{grid-template-columns:1fr;}}
+.qrprev{width:100px;height:100px;border-radius:9px;border:1px solid var(--bdr);background:var(--bg2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;}
+.qrprev canvas,.qrprev img{width:100%;height:100%;}
+.qrctrl{display:grid;gap:8px;}
+.qrrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.qrrow label{font-size:10px;font-weight:700;color:var(--tx3);min-width:28px;letter-spacing:.04em;text-transform:uppercase;}
+.qrci{width:32px;height:25px;border-radius:5px;border:1px solid var(--bdr);padding:2px;cursor:pointer;}
+.qrsi{width:70px;padding:5px 7px;border-radius:7px;border:1px solid var(--bdr);background:var(--bg2);font-size:11.5px;color:var(--tx);outline:none;}
+.btnqrd{padding:6px 13px;border-radius:7px;background:var(--ac);color:#fff;font-size:11.5px;font-weight:600;transition:background var(--tr);align-self:end;}
+.btnqrd:hover{background:var(--acd);}
+/* Result actions */
+.ractrow{display:flex;gap:6px;padding:12px 16px;border-top:1px solid var(--bdr);flex-wrap:wrap;}
+.rabtn{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;border:1px solid var(--bdr);background:var(--bg2);font-size:12px;font-weight:600;color:var(--tx2);transition:all var(--tr);}
+.rabtn:hover{border-color:var(--bdr2);color:var(--tx);}
+.rabtn.dng:hover{border-color:var(--red);color:var(--red);background:var(--redl);}
+.btnzip{padding:8px 16px;border-radius:8px;background:var(--bg2);border:1px solid var(--bdr);font-size:12px;font-weight:600;color:var(--tx2);transition:all var(--tr);display:flex;align-items:center;gap:6px;}
+.btnzip:hover{border-color:var(--ac);color:var(--ac);background:var(--acl);}
+
+/* ═══════════════════════════════════════
+   SECTION LABELS
+═══════════════════════════════════════ */
+.stag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ac);background:var(--acl);border:1px solid var(--bdr2);border-radius:20px;padding:4px 13px;margin-bottom:13px;}
+.shd{font-family:var(--fd);font-size:clamp(25px,3.8vw,42px);font-weight:900;line-height:1.15;letter-spacing:-.02em;color:var(--tx);margin-bottom:9px;}
+.ssub{font-size:16px;color:var(--tx2);max-width:470px;line-height:1.65;}
+
+/* ═══════════════════════════════════════
+   HOW IT WORKS
+═══════════════════════════════════════ */
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:48px;position:relative;}
+@media(max-width:840px){.steps{grid-template-columns:1fr 1fr;gap:22px;}}
+@media(max-width:480px){.steps{grid-template-columns:1fr;gap:16px;}}
+.steps::before{content:'';position:absolute;top:30px;left:calc(12.5% + 16px);width:calc(75% - 32px);height:2px;background:linear-gradient(90deg,var(--ac),rgba(47,93,168,.1));pointer-events:none;}
+@media(max-width:840px){.steps::before{display:none;}}
+.stcard{display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 12px;position:relative;}
+.stnum{width:60px;height:60px;border-radius:50%;background:var(--glbg);backdrop-filter:var(--glbl);border:2px solid var(--bdr2);display:flex;align-items:center;justify-content:center;font-size:21px;box-shadow:var(--glsh);margin-bottom:16px;position:relative;z-index:1;transition:all .3s;}
+.stcard:hover .stnum{transform:scale(1.1);box-shadow:var(--glsh),0 0 22px rgba(47,93,168,.2);}
+.stitle2{font-family:var(--fd);font-size:14.5px;font-weight:700;color:var(--tx);margin-bottom:6px;}
+.sdesc{font-size:13px;color:var(--tx2);line-height:1.55;}
+.sarr{position:absolute;right:-14px;top:18px;font-size:17px;color:var(--ac);opacity:.4;z-index:2;}
+@media(max-width:840px){.sarr{display:none;}}
+
+/* ═══════════════════════════════════════
+   BENEFITS — Desktop polished
+═══════════════════════════════════════ */
+.ftbg{background:var(--bg2);border-top:1px solid var(--bdr);}
+.ftgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:48px;}
+@media(max-width:840px){.ftgrid{grid-template-columns:1fr 1fr;}}
+@media(max-width:500px){.ftgrid{grid-template-columns:1fr;}}
+.ftcard{
+  background:var(--bg);border:1px solid var(--bdr);border-radius:var(--rlg);
+  box-shadow:var(--shsm);padding:24px 22px;
+  transition:all .3s;position:relative;overflow:hidden;
+  display:flex;flex-direction:column;
+}
+.ftcard::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--ac),transparent);transform:scaleX(0);transform-origin:left;transition:transform .35s ease;}
+.ftcard:hover{border-color:var(--bdr2);box-shadow:var(--shmd),0 0 0 1px var(--bdr2);transform:translateY(-3px);}
+.ftcard:hover::after{transform:scaleX(1);}
+.ftiw{width:42px;height:42px;border-radius:11px;background:var(--acl);border:1px solid var(--bdr2);display:flex;align-items:center;justify-content:center;font-size:19px;margin-bottom:13px;flex-shrink:0;}
+.fttitle{font-family:var(--fd);font-size:15.5px;font-weight:700;color:var(--tx);margin-bottom:7px;}
+.ftdesc{font-size:13px;color:var(--tx2);line-height:1.6;flex:1;}
+
+/* ═══════════════════════════════════════
+   DONATION — 3D Flip Cards
+═══════════════════════════════════════ */
+.donsec{background:var(--bg2);border-top:1px solid var(--bdr);border-bottom:1px solid var(--bdr);}
+.doncards{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:40px;perspective:1200px;}
+@media(max-width:700px){.doncards{grid-template-columns:1fr;max-width:340px;margin-left:auto;margin-right:auto;}}
+.fcard{height:200px;cursor:pointer;}
+.finn{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .65s cubic-bezier(.4,0,.2,1);}
+.fcard:hover .finn,.fcard.flipped .finn{transform:rotateY(180deg);}
+.ffront,.fback{position:absolute;inset:0;border-radius:var(--rlg);border:1px solid var(--bdr);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;text-align:center;backface-visibility:hidden;-webkit-backface-visibility:hidden;}
+.ffront{background:var(--glbg);backdrop-filter:var(--glbl);box-shadow:var(--glsh);}
+.fback{background:linear-gradient(135deg,var(--ac),var(--acd));color:#fff;transform:rotateY(180deg);box-shadow:var(--shac);border-color:transparent;}
+.flogo{font-size:32px;margin-bottom:9px;}
+.fname{font-family:var(--fd);font-size:15px;font-weight:700;color:var(--tx);}
+.ftap{font-size:10.5px;color:var(--tx3);margin-top:5px;}
+.fbtitle{font-size:13px;font-weight:700;margin-bottom:5px;}
+.fbnum{font-family:var(--fm);font-size:13.5px;font-weight:600;margin:5px 0;background:rgba(255,255,255,.15);border-radius:7px;padding:5px 11px;}
+.fbinst{font-size:11px;opacity:.85;line-height:1.5;}
+.fbcpy{margin-top:9px;padding:6px 13px;border-radius:7px;background:rgba(255,255,255,.2);color:#fff;font-size:11.5px;font-weight:600;border:1px solid rgba(255,255,255,.3);transition:background var(--tr);}
+.fbcpy:hover{background:rgba(255,255,255,.3);}
+
+/* ═══════════════════════════════════════
+   FAQ
+═══════════════════════════════════════ */
+.faqlist{margin-top:40px;display:grid;gap:9px;max-width:720px;margin-left:auto;margin-right:auto;}
+.faqitem{background:var(--glbg);backdrop-filter:var(--glbl);border:1px solid var(--bdr);border-radius:var(--r);box-shadow:var(--glsh);overflow:hidden;}
+.faqq{display:flex;align-items:center;justify-content:space-between;gap:11px;padding:16px 20px;cursor:pointer;user-select:none;transition:background var(--tr);}
+.faqq:hover{background:rgba(47,93,168,.03);}
+.faqqt{font-size:14.5px;font-weight:600;color:var(--tx);line-height:1.4;}
+.faqi{font-size:17px;color:var(--ac);flex-shrink:0;transition:transform .3s ease;}
+.faqitem.open .faqi{transform:rotate(45deg);}
+.faqa{max-height:0;overflow:hidden;transition:max-height .4s cubic-bezier(.4,0,.2,1),padding .3s;padding:0 20px;}
+.faqitem.open .faqa{max-height:360px;padding:0 20px 16px;}
+.faqa p{font-size:13.5px;color:var(--tx2);line-height:1.75;}
+
+/* ═══════════════════════════════════════
+   FOOTER
+═══════════════════════════════════════ */
+footer{background:var(--bg);border-top:1px solid var(--bdr);padding:48px 0 0;}
+.fgrid{display:grid;grid-template-columns:1.8fr 1fr 1fr 1fr;gap:32px;padding-bottom:36px;}
+@media(max-width:840px){.fgrid{grid-template-columns:1fr 1fr;gap:24px;}}
+@media(max-width:460px){.fgrid{grid-template-columns:1fr;gap:20px;}}
+.fbrand .fl{font-family:var(--fd);font-size:21px;font-weight:700;color:var(--ac);margin-bottom:9px;}
+.fbrand p{font-size:13px;color:var(--tx3);line-height:1.65;max-width:200px;margin-bottom:14px;}
+.fsoc{display:flex;gap:7px;}
+.socbtn{width:32px;height:32px;border-radius:8px;border:1px solid var(--bdr);background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--tx3);transition:all var(--tr);}
+.socbtn:hover{border-color:var(--ac);color:var(--ac);background:var(--acl);}
+.fcol h4{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--tx);margin-bottom:13px;}
+.fcol ul{list-style:none;}
+.fcol ul li{margin-bottom:8px;}
+.fcol ul li a{font-size:13px;color:var(--tx3);transition:color var(--tr);}
+.fcol ul li a:hover{color:var(--ac);}
+.fbot{border-top:1px solid var(--bdr);padding:0;margin-top:0;}
+.fbot-inner{
+  text-align:center;
+  padding:28px 24px 24px;
+  background:var(--bg);
+  transition:background var(--tr);
+}
+.fbot-made{
+  font-family:'Dancing Script',cursive;
+  font-size:38px;
+  font-weight:700;
+  background:linear-gradient(135deg,#f5a623,#f8b500,#ffd04d,#f5a623);
+  background-size:200% auto;
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+  animation:goldShine 3s linear infinite;
+  margin-bottom:10px;
+  display:block;
+  letter-spacing:-.5px;
+}
+@keyframes goldShine{0%{background-position:0% center;}100%{background-position:200% center;}}
+.fbot-copy{font-size:13px;color:var(--tx3);margin-bottom:4px;}
+.fbot-copy a{color:var(--ac);transition:color var(--tr);}
+.fbot-copy a:hover{color:#f5a623;}
+.fbot-tag{font-size:12px;color:var(--tx3);}
+
+/* ═══════════════════════════════════════
+   MODALS
+═══════════════════════════════════════ */
+.mov{position:fixed;inset:0;z-index:5000;background:rgba(0,0,0,.42);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:18px;opacity:0;pointer-events:none;transition:opacity .3s;}
+.mov.show{opacity:1;pointer-events:all;}
+.mbox{background:var(--bg);border:1px solid var(--bdr);border-radius:var(--rxl);box-shadow:var(--shlg);width:100%;max-width:640px;max-height:82vh;display:flex;flex-direction:column;transform:scale(.95) translateY(9px);transition:transform .3s cubic-bezier(.34,1.2,.64,1);}
+.mov.show .mbox{transform:scale(1) translateY(0);}
+.mhdr{display:flex;align-items:center;justify-content:space-between;padding:17px 22px;border-bottom:1px solid var(--bdr);}
+.mhdr h3{font-family:var(--fd);font-size:16px;font-weight:700;color:var(--tx);}
+.mcls{width:28px;height:28px;border-radius:7px;border:1px solid var(--bdr);background:var(--bg2);font-size:14px;color:var(--tx3);display:flex;align-items:center;justify-content:center;transition:all var(--tr);}
+.mcls:hover{border-color:var(--red);color:var(--red);background:var(--redl);}
+.mbdy{padding:20px 22px;overflow-y:auto;flex:1;font-size:13.5px;color:var(--tx2);line-height:1.8;}
+.mbdy h4{font-family:var(--fd);font-size:14px;font-weight:700;color:var(--tx);margin:15px 0 6px;}
+.mbdy h4:first-child{margin-top:0;}
+.mbdy p{margin-bottom:10px;}
+.mbdy ul{margin-left:17px;margin-bottom:10px;}
+.mbdy li{margin-bottom:3px;}
+#fi{display:none;}
+</style>
+</head>
+<body>
+
+<!-- SKELETON -->
+<div id="sko">
+  <div class="sk-hd"><div class="sk-l"></div><div class="sk-n"><span></span><span></span><span></span></div></div>
+  <div class="sk-hr">
+    <div class="sk-b"></div><div class="sk-h1"></div><div class="sk-h2"></div>
+    <div class="sk-s"></div><div class="sk-bx"></div>
+  </div>
+</div>
+
+<!-- COOKIE BANNER -->
+<div id="ck">
+  <p>We use cookies to enhance your experience. By using Imgify, you agree to our <a href="#" onclick="rlnk('cookieUrl');return false;">Cookie Policy</a>.</p>
+  <div class="ck-btns">
+    <button class="ck-dec" onclick="dck(false)">Decline</button>
+    <button class="ck-acc" onclick="dck(true)">Accept All</button>
+  </div>
+</div>
+
+<!-- BANNERS -->
+<div id="mb">🔧 Site is currently under maintenance. Some features may be unavailable.</div>
+<div id="ab">📢 Announcement</div>
+
+<!-- SIDEBAR (mobile) -->
+<div id="sbo" onclick="csb()"></div>
+<aside id="sb">
+  <div class="sb-hd">
+    <div class="sb-logo">Imgify</div>
+    <button class="sb-cls" onclick="csb()">✕</button>
+  </div>
+  <ul class="sb-nav">
+    <li><a href="#" class="active"><span class="si">🏠</span>Home</a></li>
+    <li><a href="dashboard.html"><span class="si">🖼️</span>My Uploads</a></li>
+    <li><a href="albums.html"><span class="si">📁</span>Albums</a></li>
+    <li><a href="#donate"><span class="si">💙</span>Donate / Support</a></li>
+    <li><a href="#about"><span class="si">ℹ️</span>About</a></li>
+    <li><a href="#" onclick="rlnk('apiDocsUrl');return false;"><span class="si">📄</span>API Docs</a></li>
+    <li><a href="#" onclick="rlnk('privacyUrl');return false;"><span class="si">🔒</span>Privacy Policy</a></li>
+    <li><a href="#" onclick="rlnk('tosUrl');return false;"><span class="si">📋</span>Terms of Service</a></li>
+  </ul>
+  <div class="sb-ft">© <span id="sby"></span> Imgify</div>
+</aside>
+
+<!-- NAVBAR -->
+<nav class="nav">
+  <a href="#" class="nav-logo">Imgify</a>
+  <ul class="nav-links">
+    <li><a href="#" class="active">Home</a></li>
+    <li><a href="dashboard.html">My Uploads</a></li>
+    <li><a href="albums.html">Albums</a></li>
+    <li><a href="#donate">Donate</a></li>
+    <li><a href="#about">About</a></li>
+    <li><a href="#" onclick="rlnk('apiDocsUrl');return false;">API Docs</a></li>
+  </ul>
+  <div class="nav-r">
+    <button class="ibtn hbtn" onclick="osb()" title="Menu" aria-label="Menu">
+      <svg width="16" height="14" viewBox="0 0 16 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+        <line x1="1" y1="2" x2="15" y2="2"/><line x1="1" y1="7" x2="15" y2="7"/><line x1="1" y1="12" x2="15" y2="12"/>
+      </svg>
+    </button>
+  </div>
+</nav>
+
+<div id="tc"></div>
+<input type="file" id="fi" multiple accept="image/*"/>
+
+<!-- ══════════════════ HERO ══════════════════ -->
+<section class="hero">
+  <div class="badge reveal"><span class="bdot"></span>⚡ Free · No Account · 32MB Limit</div>
+
+  <h1 class="reveal d1">
+    Host Images. Share <em>Link</em>.<br/>No account needed.
+  </h1>
+
+  <p class="hero-sub reveal d2">
+    Upload any image instantly — get a permanent shareable link, QR code, HTML embed, and more. Zero signup. Free forever.
+  </p>
+
+  <div class="stats-bar reveal d3">
+    <div class="si-item"><div class="si-num" data-target="50000">0</div><div class="si-lbl">Images Hosted</div></div>
+    <div class="si-item"><div class="si-num" data-target="32">0</div><div class="si-lbl">MB Max Size</div></div>
+    <div class="si-item"><div class="si-num" data-target="10">0</div><div class="si-lbl">Files at Once</div></div>
+    <div class="si-item"><div class="si-num" data-suffix="∞">∞</div><div class="si-lbl">Storage Time</div></div>
+  </div>
+
+  <!-- Upload Zone (compact) -->
+  <div class="upwrap reveal d4">
+    <div class="upzone" id="upz">
+      <div class="upiw">
+        <svg class="upisv" viewBox="0 0 24 24">
+          <path d="M12 15V5m0 0-3.5 3.5M12 5l3.5 3.5"/>
+          <path d="M3 15v3a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3"/>
+        </svg>
+      </div>
+      <h3>Drop images here</h3>
+      <p>Drag & drop or <strong>click to browse</strong> — JPG, PNG, GIF, WebP, AVIF, SVG</p>
+      <button class="btnbr" onclick="document.getElementById('fi').click()">Browse Files</button>
+    </div>
+  </div>
+
+  <!-- Below zone -->
+  <div class="bzone reveal d4">
+    <div class="url-row2">
+      <input type="text" class="url-inp" id="urlinp" placeholder="Or paste an image URL to re-host…"/>
+      <button class="btn-url" onclick="urlUp()">⬆️ Upload URL</button>
+    </div>
+    <div class="specs">
+      <div class="chip">📦 Max 32MB</div>
+      <div class="chip">🖼️ 10 files/batch</div>
+      <div class="chip">⚡ Instant share</div>
+      <div class="chip">🔒 Privacy controls</div>
+    </div>
+    <div class="ph"><span class="pkey">Ctrl</span>+<span class="pkey">V</span> to paste from clipboard</div>
+  </div>
+
+  <!-- Progress -->
+  <div class="prwrap" id="prwrap">
+    <div class="prtrack"><div class="prfill" id="prfill"></div></div>
+    <div class="prlbl"><span id="prtxt">Uploading…</span><span id="prpct">0%</span></div>
+  </div>
+
+  <!-- Options Panel -->
+  <div class="opanel" id="op">
+    <div class="oinner">
+      <div class="otitle">⚙️ Customize Before Upload<span class="ocnt" id="ocnt">0 files</span></div>
+      <div class="tgrid" id="tgrid"></div>
+      <div class="ogrid">
+        <div class="ofield">
+          <label class="olbl">Image Name</label>
+          <input type="text" class="oinp" id="iname" placeholder="my-photo"/>
+        </div>
+        <div class="ofield">
+          <label class="olbl">URL Expiry</label>
+          <select class="oinp" id="iexp">
+            <option value="">Never</option>
+            <option value="1h">1 Hour</option>
+            <option value="6h">6 Hours</option>
+            <option value="24h">24 Hours</option>
+            <option value="7d">7 Days</option>
+            <option value="30d">30 Days</option>
+          </select>
+        </div>
+        <div class="ofield full">
+          <label class="olbl">Privacy</label>
+          <div class="pvrow">
+            <div class="pvopt sel" data-pv="public"><span class="pi">🌍</span>Public</div>
+            <div class="pvopt" data-pv="unlisted"><span class="pi">🔗</span>Unlisted</div>
+            <div class="pvopt" data-pv="private"><span class="pi">🔒</span>Private</div>
+          </div>
+        </div>
+        <div class="ofield full">
+          <label class="olbl">Custom URL Slug (optional)</label>
+          <div class="slgwrap">
+            <span class="slgpfx" id="slgpfx">imgify.vercel.app/i/</span>
+            <input type="text" class="slginp" id="slginp" placeholder="my-photo (blank = auto)"/>
+          </div>
+        </div>
+        <div class="ofield full">
+          <label class="olbl">Quality: <span id="qdisp">90%</span></label>
+          <div class="slrow">
+            <input type="range" class="qs" id="qsl" min="10" max="100" value="90"/>
+            <span class="qv" id="qval">90%</span>
+          </div>
+        </div>
+        <div class="ofield full">
+          <label class="olbl">Tags</label>
+          <div class="tgwrap" id="tgwrap"><input type="text" class="tginp" id="tginp" placeholder="Add tags (press Enter)…"/></div>
+        </div>
+        <div class="ofield full">
+          <label class="olbl">Quick Edit</label>
+          <div class="edrow">
+            <button class="edbtn" onclick="ea('crop')">✂️ Crop</button>
+            <button class="edbtn" onclick="ea('rotate-l')">↺ Rotate L</button>
+            <button class="edbtn" onclick="ea('rotate-r')">↻ Rotate R</button>
+            <button class="edbtn" onclick="ea('flip-h')">↔ Flip H</button>
+            <button class="edbtn" onclick="ea('flip-v')">↕ Flip V</button>
+            <button class="edbtn" onclick="ea('brightness')">☀️ Brightness</button>
+            <button class="edbtn" onclick="ea('contrast')">🌓 Contrast</button>
+          </div>
+        </div>
+      </div>
+      <button class="btnup" id="ubtn" onclick="startUp()">🚀 Upload &amp; Generate Links</button>
+    </div>
+  </div>
+
+  <!-- Result Section -->
+  <div class="rsec" id="rsec">
+    <div class="rhdr">
+      <div class="rtitle">✅ Upload Complete</div>
+      <div class="racts">
+        <button class="btnzip" onclick="dlZip()" id="zipbtn" style="display:none;">📦 Download URLs.txt</button>
+        <button class="rabtn" onclick="resetUp()">⬆️ Upload More</button>
+      </div>
+    </div>
+    <div class="rcards" id="rcards"></div>
+  </div>
+</section>
+
+<!-- ══════════════════ HOW IT WORKS ══════════════════ -->
+<section class="sec" id="how">
+  <div class="ctr">
+    <div style="text-align:center;" class="reveal">
+      <div class="stag">How It Works</div>
+      <h2 class="shd">Four steps to share any image</h2>
+      <p class="ssub" style="margin:0 auto;">No account, no complexity. Drop, customize, copy — done.</p>
+    </div>
+    <div class="steps">
+      <div class="stcard reveal d1"><div class="stnum">📂</div><h3 class="stitle2">Choose Image</h3><p class="sdesc">Drag & drop, browse files, paste from clipboard, or paste a URL</p><span class="sarr">→</span></div>
+      <div class="stcard reveal d2"><div class="stnum">⚙️</div><h3 class="stitle2">Customize</h3><p class="sdesc">Set name, expiry, privacy, slug, compression quality and tags</p><span class="sarr">→</span></div>
+      <div class="stcard reveal d3"><div class="stnum">🚀</div><h3 class="stitle2">Upload</h3><p class="sdesc">Imgify hosts your image instantly on secure CDN infrastructure</p><span class="sarr">→</span></div>
+      <div class="stcard reveal d4"><div class="stnum">🔗</div><h3 class="stitle2">Share Links</h3><p class="sdesc">Copy direct URL, HTML embed, QR code, BBCode or Markdown</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ BENEFITS ══════════════════ -->
+<section class="sec ftbg">
+  <div class="ctr">
+    <div style="text-align:center;" class="reveal">
+      <div class="stag">Why Imgify</div>
+      <h2 class="shd">Everything you need,<br/>nothing you don't</h2>
+    </div>
+    <div class="ftgrid">
+      <div class="ftcard reveal d1"><div class="ftiw">⚡</div><h3 class="fttitle">Lightning Fast CDN</h3><p class="ftdesc">Images hosted on ImgBB's global CDN. Fast loads anywhere in the world, every time.</p></div>
+      <div class="ftcard reveal d2"><div class="ftiw">🔒</div><h3 class="fttitle">Privacy Controls</h3><p class="ftdesc">Set images as Public, Unlisted, or Private. Password-protect any image instantly.</p></div>
+      <div class="ftcard reveal d3"><div class="ftiw">📎</div><h3 class="fttitle">5 Link Formats</h3><p class="ftdesc">Direct URL, HTML embed, BBCode, Markdown, and Thumbnail URL — all at once.</p></div>
+      <div class="ftcard reveal d1"><div class="ftiw">📱</div><h3 class="fttitle">Custom QR Codes</h3><p class="ftdesc">Generate QR codes for any image. Pick FG/BG colors, size, and download as PNG.</p></div>
+      <div class="ftcard reveal d2"><div class="ftiw">⏱️</div><h3 class="fttitle">URL Expiry</h3><p class="ftdesc">Set links to expire after 1 hour, 7 days, or any custom date you choose.</p></div>
+      <div class="ftcard reveal d3"><div class="ftiw">📁</div><h3 class="fttitle">Albums</h3><p class="ftdesc">Organize images into public or private albums with shareable collection pages.</p></div>
+      <div class="ftcard reveal d1"><div class="ftiw">🗂️</div><h3 class="fttitle">Bulk Upload</h3><p class="ftdesc">Upload up to 10 images at once. Manage names, settings and tags together.</p></div>
+      <div class="ftcard reveal d2"><div class="ftiw">♾️</div><h3 class="fttitle">No Account Needed</h3><p class="ftdesc">Uploads tracked by browser session. No email, no password, no friction — ever.</p></div>
+      <div class="ftcard reveal d3"><div class="ftiw">🆓</div><h3 class="fttitle">Free Forever</h3><p class="ftdesc">Core Imgify features are and will always remain completely free to use.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ DONATION ══════════════════ -->
+<section class="sec donsec" id="donate">
+  <div class="ctr">
+    <div style="text-align:center;" class="reveal">
+      <div class="stag">Support Imgify ☕</div>
+      <h2 class="shd">Keep Imgify free —<br/>every bit helps</h2>
+      <p class="ssub" style="margin:0 auto;">Imgify runs on passion and server costs. If it saved you time, click a card to support development.</p>
+    </div>
+    <div class="doncards">
+      <div class="fcard"><div class="finn">
+        <div class="ffront"><div class="flogo" id="ep-ico">📱</div><div class="fname">EasyPaisa</div><div class="ftap">Click to see details</div></div>
+        <div class="fback"><div class="fbtitle">EasyPaisa Transfer</div><div class="fbnum" id="ep-num">03XX-XXXXXXX</div><div class="fbinst">Send amount via EasyPaisa app or retailer</div><button class="fbcpy" onclick="ct(document.getElementById('ep-num').textContent,this)">📋 Copy Number</button></div>
+      </div></div>
+      <div class="fcard"><div class="finn">
+        <div class="ffront"><div class="flogo" id="jc-ico">💳</div><div class="fname">JazzCash</div><div class="ftap">Click to see details</div></div>
+        <div class="fback"><div class="fbtitle">JazzCash Transfer</div><div class="fbnum" id="jc-num">03XX-XXXXXXX</div><div class="fbinst">Send via JazzCash app or USSD *786#</div><button class="fbcpy" onclick="ct(document.getElementById('jc-num').textContent,this)">📋 Copy Number</button></div>
+      </div></div>
+      <div class="fcard"><div class="finn">
+        <div class="ffront"><div class="flogo" id="py-ico">🌐</div><div class="fname">Payoneer</div><div class="ftap">Click to see details</div></div>
+        <div class="fback"><div class="fbtitle">Payoneer</div><div class="fbnum" id="py-em">your@email.com</div><div class="fbinst">Send via Payoneer "Pay to Email"</div><button class="fbcpy" onclick="ct(document.getElementById('py-em').textContent,this)">📋 Copy Email</button></div>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ FAQ ══════════════════ -->
+<section class="sec" id="faq">
+  <div class="ctr">
+    <div style="text-align:center;" class="reveal"><div class="stag">FAQ</div><h2 class="shd">Common questions</h2></div>
+    <div class="faqlist">
+      <div class="faqitem reveal d1"><div class="faqq"><span class="faqqt">Do I need an account to upload images?</span><span class="faqi">+</span></div><div class="faqa"><p>No. Imgify is completely account-free. Your uploads are tracked by your browser session ID stored in localStorage. Manage all your images from "My Uploads" on the same browser.</p></div></div>
+      <div class="faqitem reveal d2"><div class="faqq"><span class="faqqt">What is the maximum file size per image?</span><span class="faqi">+</span></div><div class="faqa"><p>Each image can be up to 32MB. You can upload up to 10 images at once. Supported formats: JPG, PNG, GIF, WebP, AVIF, BMP, SVG.</p></div></div>
+      <div class="faqitem reveal d3"><div class="faqq"><span class="faqqt">How long are my images stored?</span><span class="faqi">+</span></div><div class="faqa"><p>By default, images are stored permanently. You can set a URL expiry (1 hour, 7 days, 30 days, or custom) during upload. After expiry, the link shows a branded expired page.</p></div></div>
+      <div class="faqitem reveal d4"><div class="faqq"><span class="faqqt">What privacy options are available?</span><span class="faqi">+</span></div><div class="faqa"><p><strong>Public</strong> — anyone with the link can view. <strong>Unlisted</strong> — only via direct link, not discoverable. <strong>Private</strong> — requires a password. Set during upload or change in your dashboard.</p></div></div>
+      <div class="faqitem reveal d1"><div class="faqq"><span class="faqqt">Can I use Imgify images on my website or forum?</span><span class="faqi">+</span></div><div class="faqa"><p>Yes. Imgify provides direct URLs for hotlinking, HTML embed codes, BBCode for forums, and Markdown links. All generated instantly with one-click copy buttons.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ ABOUT ══════════════════ -->
+<section class="sec" id="about" style="background:var(--bg2);border-top:1px solid var(--bdr);">
+  <div class="ctr">
+    <div style="max-width:640px;" class="reveal">
+      <div class="stag">About Imgify</div>
+      <h2 class="shd">Built for simplicity</h2>
+      <p style="font-size:15.5px;color:var(--tx2);line-height:1.75;margin-top:13px;">Imgify is a free, no-account image hosting platform built to make sharing images effortless. Whether you're sharing a meme, embedding a product photo, or archiving screenshots — Imgify gives you a fast, reliable link in seconds.</p>
+      <p style="font-size:15.5px;color:var(--tx2);line-height:1.75;margin-top:10px;">Independently developed and maintained. Images are hosted via the ImgBB API on their global CDN. Metadata and session data stored securely in Firebase Firestore.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ FOOTER ══════════════════ -->
+<footer>
+  <div class="ctr">
+    <div class="fgrid">
+      <div class="fbrand">
+        <div class="fl">Imgify</div>
+        <p>Host Images. Share Link. No account needed. Free image hosting for everyone, forever.</p>
+        <div class="fsoc">
+          <a href="#" class="socbtn" id="ftgh" title="GitHub">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/></svg>
+          </a>
+        </div>
+      </div>
+      <div class="fcol"><h4>Product</h4><ul><li><a href="#">Upload</a></li><li><a href="dashboard.html">My Uploads</a></li><li><a href="albums.html">Albums</a></li><li><a href="#donate">Donate</a></li><li><a href="#" onclick="rlnk('apiDocsUrl');return false;">API Docs</a></li></ul></div>
+      <div class="fcol"><h4>Legal</h4><ul><li><a href="#" onclick="rlnk('privacyUrl');return false;">Privacy Policy</a></li><li><a href="#" onclick="rlnk('tosUrl');return false;">Terms of Service</a></li><li><a href="#" onclick="rlnk('cookieUrl');return false;">Cookie Policy</a></li><li><a href="#" onclick="rlnk('reportAbuseUrl');return false;">Report Abuse</a></li></ul><div id="ftct-wrap" style="margin-top:10px;display:flex;gap:7px;flex-wrap:wrap;"></div></div>
+      <div class="fcol"><h4>Developer</h4><ul><li><a href="#" id="ftdn">Muhammad Anas</a></li><li><a href="#" id="ftgh2">GitHub</a></li><li><a href="#about">About Imgify</a></li></ul></div>
+    </div>
+    <div class="fbot">
+      <div class="fbot-inner">
+        <span class="fbot-made" id="fdev">Made By Anas</span>
+        <div class="fbot-copy">© <span id="cpy"></span> <a href="#">Imgify</a>. All rights reserved.</div>
+        <div class="fbot-tag">Host Images. Share Link. No account needed.</div>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- ══════════════════ MODALS ══════════════════ -->
+<div class="mov" id="prvM"><div class="mbox"><div class="mhdr"><h3>Privacy Policy</h3><button class="mcls" onclick="cm('prvM')">✕</button></div><div class="mbdy"><p><strong>Last updated:</strong> 2025</p><h4>1. Information We Collect</h4><p>Imgify does not require account registration. We collect only what is necessary: uploaded image files (temporarily for processing), anonymous browser session IDs stored in localStorage, and usage metadata (upload timestamps, image names, privacy settings, view counts).</p><h4>2. How We Use Information</h4><p>Collected information is used solely to host and serve your uploaded images, associate images with your browser session, and improve platform performance. We do not sell, rent, or share your information with third parties for marketing purposes.</p><h4>3. Image Storage</h4><p>Images are stored via the ImgBB API. Session metadata is stored in Firebase Firestore. By uploading, you agree to ImgBB's terms regarding image storage.</p><h4>4. Cookies &amp; localStorage</h4><p>We use localStorage (not traditional cookies) to store your session ID, theme preference, and cookie consent status. No tracking cookies are used.</p><h4>5. Third-Party Services</h4><p>We use ImgBB (image hosting), Firebase (metadata/session storage), and QRCode.js (client-side QR generation). These services have their own privacy policies.</p><h4>6. Your Rights</h4><p>You can delete any image you've uploaded via your dashboard at any time. Clearing your browser's localStorage will disassociate uploads from your browser.</p></div></div></div>
+
+<div class="mov" id="tosM"><div class="mbox"><div class="mhdr"><h3>Terms of Service</h3><button class="mcls" onclick="cm('tosM')">✕</button></div><div class="mbdy"><p><strong>Last updated:</strong> 2025</p><h4>1. Acceptance of Terms</h4><p>By using Imgify, you agree to these Terms of Service. If you do not agree, please do not use this service.</p><h4>2. Permitted Use</h4><p>Imgify is for hosting and sharing images for personal, educational, and commercial purposes, provided content does not violate these terms.</p><h4>3. Prohibited Content</h4><p>You must not upload: adult/explicit content, copyrighted material you don't own rights to, malware disguised as images, private information of others without consent, or content promoting illegal activity, hate speech, or violence.</p><h4>4. Content Ownership</h4><p>You retain all rights to images you upload. By uploading, you grant Imgify a non-exclusive license to store and serve the image as part of providing the service.</p><h4>5. Limitation of Liability</h4><p>Imgify is provided "as is". We are not liable for any data loss, service interruptions, or damages arising from use of this platform.</p><h4>6. Reporting Abuse</h4><p>If you encounter prohibited content, use the Report Abuse feature on any image's view page. We review reports promptly.</p></div></div></div>
+
+<div class="mov" id="ckM"><div class="mbox"><div class="mhdr"><h3>Cookie Policy</h3><button class="mcls" onclick="cm('ckM')">✕</button></div><div class="mbdy"><h4>What We Store</h4><p>Imgify uses browser localStorage to store:</p><ul><li><strong>imgify_session</strong> — Anonymous session ID for associating uploads with your browser</li><li><strong>imgify_theme</strong> — Your light/dark theme preference</li><li><strong>imgify_cookie_consent</strong> — Whether you accepted or declined the cookie notice</li></ul><h4>Third-Party Services</h4><p>Firebase and ImgBB may use their own cookies on their infrastructure. We do not control third-party cookies.</p><h4>Managing Storage</h4><p>Clear Imgify's stored data at any time by clearing your browser's localStorage for this domain. This resets your session and theme.</p></div></div></div>
+
+<div class="mov" id="abuM"><div class="mbox"><div class="mhdr"><h3>Report Abuse</h3><button class="mcls" onclick="cm('abuM')">✕</button></div><div class="mbdy"><p>To report abusive or illegal content hosted on Imgify, visit the image's view page and use the "Report" button. Provide a reason and submit.</p><p>We review reports and remove violating content promptly. For urgent matters, contact us via the footer Contact link.</p></div></div></div>
+
+<div class="mov" id="apiM"><div class="mbox"><div class="mhdr"><h3>API Docs</h3><button class="mcls" onclick="cm('apiM')">✕</button></div><div class="mbdy"><p>Imgify's public API documentation is coming soon. The API will allow developers to upload images and retrieve URLs programmatically. Watch the GitHub repository for updates.</p></div></div></div>
+
+<script>
+/* ── CONFIG ── */
+const FIREBASE_CONFIG={apiKey:"",authDomain:"",projectId:"",storageBucket:"",messagingSenderId:"",appId:""};
+const IMGBB_PROXY='/api/imgbb-upload';
+
+/* ── FIREBASE INIT ── */
+let db=null,DB_READY=false;
+(function(){
+  try{
+    if(FIREBASE_CONFIG.apiKey&&FIREBASE_CONFIG.projectId){
+      firebase.initializeApp(FIREBASE_CONFIG);
+      db=firebase.firestore();
+      DB_READY=true;
+    }
+  }catch(e){console.warn('[Imgify] Firebase init failed:',e);}
+})();
+let VERIFIED_DOMAINS=[];
+const CDOMAIN=window.location.hostname||'imgify.vercel.app';
+const CORIGIN=window.location.origin||'https://imgify.vercel.app';
+
+let CFG={siteName:"Imgify",allowUploads:true,maxFileSizeMB:32,maintenanceMode:false,maintenanceText:"",announcementText:"",announcementEnabled:false,donationEnabled:false,easypaisaNumber:"",easypaisaIconUrl:"",jazzcashNumber:"",jazzcashIconUrl:"",payoneerEmail:"",payoneerIconUrl:"",adsEnabled:false,devName:"Muhammad Anas",devGithub:"#",devEmail:"#",copyrightYear:String(new Date().getFullYear()),verifiedDomains:[],tosUrl:"",privacyUrl:"",cookieUrl:"",reportAbuseUrl:"",apiDocsUrl:"",contactChannels:[]};
+
+/* ── SESSION ── */
+function gs(){let s=localStorage.getItem('imgify_session');if(!s){s='sess_'+Math.random().toString(36).slice(2)+Date.now();localStorage.setItem('imgify_session',s);}return s;}
+const SID=gs();
+
+/* ── THEME: light-only mode ── */
+
+/* ── SIDEBAR ── */
+function osb(){document.getElementById('sb').classList.add('open');document.getElementById('sbo').classList.add('open');document.body.style.overflow='hidden';}
+function csb(){document.getElementById('sb').classList.remove('open');document.getElementById('sbo').classList.remove('open');document.body.style.overflow='';}
+
+/* ── SKELETON ── */
+window.addEventListener('load',()=>setTimeout(()=>document.getElementById('sko').classList.add('hide'),500));
+
+/* ── SCROLL REVEALS ── */
+const ro=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');ro.unobserve(e.target);}});},{threshold:.1});
+document.querySelectorAll('.reveal').forEach(el=>ro.observe(el));
+
+/* ── COUNTER ── */
+const co=new IntersectionObserver(es=>{es.forEach(e=>{if(!e.isIntersecting)return;const el=e.target;if(el.dataset.suffix)return;const tg=parseInt(el.dataset.target),st=performance.now(),dr=1600;function tk(nw){const p=Math.min((nw-st)/dr,1),ez=1-Math.pow(1-p,3),v=Math.floor(ez*tg);el.textContent=tg>=1000?(v>=1000?(v/1000).toFixed(1)+'K+':v+''):v+'';if(p<1)requestAnimationFrame(tk);else el.textContent=tg>=1000?(tg/1000).toFixed(0)+'K+':tg+'';}requestAnimationFrame(tk);co.unobserve(el);});},{threshold:.5});
+document.querySelectorAll('[data-target]').forEach(el=>co.observe(el));
+
+/* ── TOAST ── */
+function toast(msg,type='info',dur=3000){const ic={success:'✅',error:'❌',info:'ℹ️'};const t=document.createElement('div');t.className=`toast ${type}`;t.innerHTML=`<span>${ic[type]}</span><span>${msg}</span>`;document.getElementById('tc').appendChild(t);setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),300);},dur);}
+
+/* ── COPY ── */
+function ct(text,btn){navigator.clipboard.writeText(text).then(()=>{if(btn){const o=btn.textContent;btn.textContent='✅ Copied!';setTimeout(()=>btn.textContent=o,2000);}toast('Copied!','success',1600);});}
+
+/* ── COOKIE ── */
+function dck(a){localStorage.setItem('imgify_cookie_consent',a?'accepted':'declined');document.getElementById('ck').classList.remove('show');}
+window.addEventListener('load',()=>{if(!localStorage.getItem('imgify_cookie_consent'))setTimeout(()=>document.getElementById('ck').classList.add('show'),1800);});
+
+/* ── MODALS ── */
+function om(id){document.getElementById(id).classList.add('show');document.body.style.overflow='hidden';}
+function cm(id){document.getElementById(id).classList.remove('show');document.body.style.overflow='';}
+document.querySelectorAll('.mov').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)cm(m.id);}));
+
+/* ── REDIRECT LINKS ── */
+function rlnk(key){const u=CFG[key];if(u&&u.trim()&&u!=='#')window.open(u,'_blank','noopener,noreferrer');else toast('Link not configured yet','info');}
+
+/* ── FAQ ── */
+document.querySelectorAll('.faqq').forEach(q=>q.addEventListener('click',()=>{const it=q.closest('.faqitem'),op=it.classList.contains('open');document.querySelectorAll('.faqitem.open').forEach(o=>o.classList.remove('open'));if(!op)it.classList.add('open');}));
+
+/* ── DONATION FLIP ── */
+document.querySelectorAll('.fcard').forEach(c=>c.addEventListener('click',()=>c.querySelector('.finn').style.transform=c.querySelector('.finn').style.transform==='rotateY(180deg)'?'':'rotateY(180deg)'));
+
+/* ── FOOTER ── */
+const yr=new Date().getFullYear();
+document.getElementById('cpy').textContent=yr;
+document.getElementById('sby').textContent=yr;
+
+/* ── DRAG & DROP ── */
+const uz=document.getElementById('upz');
+['dragenter','dragover'].forEach(e=>uz.addEventListener(e,ev=>{ev.preventDefault();uz.classList.add('dov');}));
+['dragleave','drop'].forEach(e=>uz.addEventListener(e,ev=>{ev.preventDefault();uz.classList.remove('dov');}));
+uz.addEventListener('drop',ev=>{const f=Array.from(ev.dataTransfer.files).filter(f=>f.type.startsWith('image/'));if(f.length)pf(f);});
+uz.addEventListener('click',e=>{if(!e.target.closest('button'))document.getElementById('fi').click();});
+document.getElementById('fi').addEventListener('change',e=>{if(e.target.files.length)pf(Array.from(e.target.files));e.target.value='';});
+document.addEventListener('paste',e=>{const its=Array.from(e.clipboardData?.items||[]);const imgs=its.filter(i=>i.type.startsWith('image/')).map(i=>i.getAsFile()).filter(Boolean);if(imgs.length){pf(imgs);toast('Image pasted!','info');}});
+
+/* ── FILE STATE ── */
+let SF=[],ATI=0,UR=[],TAGS=[];
+
+function pf(files){const mx=(CFG.maxFileSizeMB||32)*1024*1024;const v=files.filter(f=>{if(f.size>mx){toast(`${f.name} exceeds ${CFG.maxFileSizeMB}MB`,'error');return false;}return true;}).slice(0,10);if(!v.length)return;SF=v;rp();document.getElementById('op').classList.add('open');document.getElementById('ocnt').textContent=`${v.length} file${v.length>1?'s':''}`;if(v.length===1)document.getElementById('iname').value=v[0].name.replace(/\.[^/.]+$/,'');}
+
+function rp(){const g=document.getElementById('tgrid');g.innerHTML='';SF.forEach((f,i)=>{const u=URL.createObjectURL(f);const d=document.createElement('div');d.className='tthumb'+(i===ATI?' active':'');d.innerHTML=`<img src="${u}" alt="${f.name}"/><button class="trm" onclick="rf(${i},event)">✕</button>`;d.addEventListener('click',()=>{ATI=i;document.querySelectorAll('.tthumb').forEach((t,j)=>t.classList.toggle('active',j===i));});g.appendChild(d);});}
+
+function rf(i,e){e.stopPropagation();SF.splice(i,1);if(!SF.length){document.getElementById('op').classList.remove('open');return;}ATI=Math.min(ATI,SF.length-1);rp();document.getElementById('ocnt').textContent=`${SF.length} file${SF.length>1?'s':''}`;}
+
+/* ── QUALITY SLIDER ── */
+document.getElementById('qsl').addEventListener('input',function(){document.getElementById('qval').textContent=this.value+'%';document.getElementById('qdisp').textContent=this.value+'%';});
+
+/* ── PRIVACY ── */
+document.querySelectorAll('.pvopt').forEach(o=>o.addEventListener('click',()=>{document.querySelectorAll('.pvopt').forEach(x=>x.classList.remove('sel'));o.classList.add('sel');}));
+
+/* ── TAGS ── */
+document.getElementById('tginp').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===',')&&e.target.value.trim()){e.preventDefault();const tag=e.target.value.trim().replace(/,/g,'');if(tag&&!TAGS.includes(tag)&&TAGS.length<10){TAGS.push(tag);const c=document.createElement('div');c.className='tgchip';c.innerHTML=`${tag}<button onclick="rt('${tag}',this.closest('.tgchip'))">×</button>`;document.getElementById('tgwrap').insertBefore(c,e.target);}e.target.value='';}});
+function rt(tag,el){TAGS.splice(TAGS.indexOf(tag),1);el.remove();}
+function ea(a){toast(`Editor: ${a} — full editor coming soon`,'info');}
+
+/* ── URL UPLOAD ── */
+async function urlUp(){const url=document.getElementById('urlinp').value.trim();if(!url){toast('Enter an image URL','error');return;}toast('Fetching…','info');try{const f=new FormData();f.append('image',url);const r=await fetch(IMGBB_PROXY,{method:'POST',body:f});const d=await r.json();if(d.success){addRC({name:'URL Image',size:fmtSz(d.data.size||0),url:d.data.url,thumb:d.data.thumb?.url||d.data.url,deleteUrl:d.data.delete_url,privacy:'public',expiry:'',slug:Math.random().toString(36).slice(2,8)});document.getElementById('rsec').classList.add('show');document.getElementById('urlinp').value='';toast('Uploaded!','success');}else throw new Error(d.error?.message||'Failed');}catch(err){toast('URL upload failed: '+err.message,'error');}}
+
+/* ── MAIN UPLOAD ── */
+async function startUp(){
+  if(!SF.length){toast('No files selected','error');return;}
+  if(!CFG.allowUploads){toast('Uploads disabled','error');return;}
+  if(VERIFIED_DOMAINS.length&&!VERIFIED_DOMAINS.includes(CDOMAIN)){toast('Unauthorized domain','error');return;}
+  const btn=document.getElementById('ubtn');btn.disabled=true;btn.textContent='⏳ Uploading…';
+  const pw=document.getElementById('prwrap'),pf=document.getElementById('prfill'),pt=document.getElementById('prtxt'),pp=document.getElementById('prpct');
+  pw.classList.add('show');UR=[];
+  const priv=document.querySelector('.pvopt.sel')?.dataset.pv||'public';
+  const nm=document.getElementById('iname').value.trim();
+  const slg=document.getElementById('slginp').value.trim().replace(/[^a-z0-9\-]/gi,'-').toLowerCase();
+  const exp=document.getElementById('iexp').value;
+  for(let i=0;i<SF.length;i++){
+    const file=SF[i];
+    const pc=Math.round((i/SF.length)*100);
+    pf.style.width=pc+'%';pp.textContent=pc+'%';pt.textContent=`Uploading ${i+1}/${SF.length}: ${file.name}`;
+    try{
+      const b=await f2b(file);const fm=new FormData();fm.append('image',b.split(',')[1]);
+      if(nm&&SF.length===1)fm.append('name',nm);
+      const r=await fetch(IMGBB_PROXY,{method:'POST',body:fm});
+      const d=await r.json();if(!d.success)throw new Error(d.error?.message||'Failed');
+
+      /* ── Slug: custom only for single-file upload, else random ── */
+      let candidateSlug=(SF.length===1&&slg)?slg:(Math.random().toString(36).slice(2,8));
+      let finalSlug=candidateSlug;
+      if(DB_READY){
+        try{
+          const slugSnap=await db.collection('customSlugs').doc(candidateSlug).get();
+          if(slugSnap.exists){finalSlug=Math.random().toString(36).slice(2,8);}
+        }catch(se){console.warn('[Imgify] Slug check:',se);}
+      }
+
+      const imageId=DB_READY?db.collection('uploads').doc().id:('local_'+Math.random().toString(36).slice(2));
+      const res={
+        name:(nm&&SF.length===1)?nm:file.name.replace(/\.[^/.]+$/,''),
+        size:fmtSz(file.size),
+        url:d.data.url,
+        imgbbUrl:d.data.url,
+        thumb:d.data.thumb?.url||d.data.url,
+        deleteUrl:d.data.delete_url,
+        shareUrl:`${CORIGIN}/i/${finalSlug}`,
+        slug:finalSlug,
+        expiry:exp,
+        privacy:priv,
+        tags:[...TAGS],
+        uploadedAt:new Date().toISOString(),
+        sessionId:SID,
+        views:0,
+        reported:false,
+        deleted:false
+      };
+
+      /* ── Firestore: 2 writes ── */
+      if(DB_READY){
+        try{
+          const fsData={...res,uploadedAt:firebase.firestore.FieldValue.serverTimestamp()};
+          delete fsData.deleteUrl; /* don't expose delete URL in Firestore */
+          await db.collection('uploads').doc(imageId).set(fsData);
+          await db.collection('customSlugs').doc(finalSlug).set({imageId,slug:finalSlug,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+        }catch(fe){console.warn('[Imgify] Firestore write failed:',fe);}
+      }
+
+      UR.push(res);addRC(res);
+    }catch(err){toast(`Failed: ${file.name} — ${err.message}`,'error');}
+  }
+  pf.style.width='100%';pp.textContent='100%';pt.textContent='All done!';
+  setTimeout(()=>pw.classList.remove('show'),1400);
+  document.getElementById('rsec').classList.add('show');
+  document.getElementById('rsec').scrollIntoView({behavior:'smooth',block:'nearest'});
+  if(UR.length>1)document.getElementById('zipbtn').style.display='flex';
+  btn.disabled=false;btn.textContent='🚀 Upload & Generate Links';
+  toast(`${UR.length} image${UR.length>1?'s':''} uploaded!`,'success');
+}
+function f2b(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file);});}
+function fmtSz(b){if(b<1024)return b+' B';if(b<1048576)return(b/1024).toFixed(1)+' KB';return(b/1048576).toFixed(2)+' MB';}
+
+/* ── RESULT CARD ── */
+function addRC(res){
+  const fmts=[
+    {t:'Direct URL',v:res.url},
+    {t:'Share URL',v:res.shareUrl||res.url},
+    {t:'HTML Embed',v:`<img src="${res.url}" alt="${res.name}"/>`},
+    {t:'BBCode',v:`[img]${res.url}[/img]`},
+    {t:'Markdown',v:`![${res.name}](${res.url})`},
+  ];
+  const c=document.createElement('div');c.className='rcard';
+  c.innerHTML=`
+    <div class="rthrow">
+      <div class="rthumb"><img src="${res.thumb}" alt="${res.name}"/></div>
+      <div class="rmeta"><div class="riname">${eh(res.name)}</div><div class="rimeta">${res.size}·${res.privacy}·${res.expiry?'Exp:'+res.expiry:'No expiry'}</div></div>
+      <button class="rcpall" onclick="cpAll(this)">📋 All</button>
+    </div>
+    <div class="ufmts">${fmts.map(f=>`<div class="ufrow"><span class="uftbdg">${f.t}</span><span class="ufval">${eh(f.v)}</span><button class="ucpbtn" onclick="cpRow(this,'${ea2(f.v)}')">Copy</button></div>`).join('')}</div>
+    <div class="qrsec">
+      <div class="qrprev" id="qr-${res.slug}"></div>
+      <div class="qrctrl">
+        <div class="qrrow"><label>FG</label><input type="color" class="qrci" value="#2F5DA8" onchange="rqr('${res.slug}','${ea2(res.url)}')" id="qrfg-${res.slug}"/><label>BG</label><input type="color" class="qrci" value="#ffffff" onchange="rqr('${res.slug}','${ea2(res.url)}')" id="qrbg-${res.slug}"/></div>
+        <div class="qrrow"><label>Size</label><input type="number" class="qrsi" value="100" min="80" max="400" onchange="rqr('${res.slug}','${ea2(res.url)}')" id="qrsz-${res.slug}"/><span style="font-size:10px;color:var(--tx3);">px</span></div>
+        <button class="btnqrd" onclick="dlqr('${res.slug}')">⬇ Download QR</button>
+      </div>
+    </div>
+    <div class="ractrow">
+      <a href="${res.url}" target="_blank" class="rabtn">🔗 Open</a>
+      <button class="rabtn" onclick="ct('${ea2(res.shareUrl||res.url)}',null)">📋 Share URL</button>
+      <a href="${res.deleteUrl||'#'}" target="_blank" class="rabtn dng">🗑️ Delete</a>
+    </div>`;
+  document.getElementById('rcards').appendChild(c);
+  setTimeout(()=>rqr(res.slug,res.url),100);
+}
+function eh(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function ea2(s){return(s||'').replace(/'/g,"\\'");}
+function cpRow(btn,text){navigator.clipboard.writeText(text).then(()=>{const o=btn.textContent;btn.textContent='Copied!';btn.classList.add('cped');setTimeout(()=>{btn.textContent=o;btn.classList.remove('cped');},2000);});}
+function cpAll(btn){const vs=Array.from(btn.closest('.rcard').querySelectorAll('.ufval')).map(e=>e.textContent);ct(vs.join('\n\n'),btn);}
+
+/* ── QR ── */
+function rqr(slug,url){const c=document.getElementById(`qr-${slug}`);if(!c)return;c.innerHTML='';const fg=document.getElementById(`qrfg-${slug}`)?.value||'#2F5DA8';const bg=document.getElementById(`qrbg-${slug}`)?.value||'#ffffff';const sz=Math.min(parseInt(document.getElementById(`qrsz-${slug}`)?.value||'100'),400);try{new QRCode(c,{text:url,width:sz,height:sz,colorDark:fg,colorLight:bg,correctLevel:QRCode.CorrectLevel.M});}catch(e){console.warn(e);}}
+function dlqr(slug){const cv=document.getElementById(`qr-${slug}`)?.querySelector('canvas');if(!cv){toast('QR not ready','error');return;}const a=document.createElement('a');a.download=`imgify-qr-${slug}.png`;a.href=cv.toDataURL('image/png');a.click();toast('QR downloaded!','success');}
+
+/* ── ZIP ── */
+function dlZip(){if(!UR.length)return;let txt='Imgify — Uploaded URLs\n'+'='.repeat(36)+'\n\n';UR.forEach((r,i)=>{txt+=`Image ${i+1}: ${r.name}\nDirect: ${r.url}\nShare: ${r.shareUrl||r.url}\nThumb: ${r.thumb}\nPrivacy: ${r.privacy}\n${r.expiry?'Expiry: '+r.expiry+'\n':''}\n`;});const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'text/plain'}));a.download='imgify-urls.txt';a.click();toast('Downloaded!','success');}
+
+/* ── RESET ── */
+function resetUp(){SF=[];UR=[];document.getElementById('rsec').classList.remove('show');document.getElementById('rcards').innerHTML='';document.getElementById('tgrid').innerHTML='';document.getElementById('zipbtn').style.display='none';document.getElementById('op').classList.remove('open');TAGS.length=0;document.getElementById('tgwrap').querySelectorAll('.tgchip').forEach(c=>c.remove());document.getElementById('iname').value='';document.getElementById('slginp').value='';window.scrollTo({top:0,behavior:'smooth'});}
+
+/* ── APPLY CONFIG ── */
+function applyConfig(cfg){
+  if(!cfg)return;CFG={...CFG,...cfg};
+  if(cfg.verifiedDomains?.length){VERIFIED_DOMAINS=cfg.verifiedDomains;if(!VERIFIED_DOMAINS.includes(CDOMAIN)){document.body.innerHTML=`<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;flex-direction:column;gap:14px;background:#0C1F3F;color:#EBF2FF;text-align:center;padding:24px;"><div style="font-size:38px;">⛔</div><h2>Unauthorized Domain</h2><p style="color:#6B80A8;max-width:380px;">Domain <strong>${CDOMAIN}</strong> is not authorized to access Imgify. Contact administrator.</p></div>`;return;}}
+  document.getElementById('slgpfx').textContent=`${CORIGIN}/i/`;
+  const mb=document.getElementById('mb');if(cfg.maintenanceMode){mb.textContent='🔧 '+(cfg.maintenanceText||'Under maintenance.');mb.classList.add('show');}else mb.classList.remove('show');
+  const ab=document.getElementById('ab');if(cfg.announcementEnabled&&cfg.announcementText){ab.textContent='📢 '+cfg.announcementText;ab.classList.add('show');}else ab.classList.remove('show');
+  if(cfg.easypaisaNumber)document.getElementById('ep-num').textContent=cfg.easypaisaNumber;
+  if(cfg.jazzcashNumber)document.getElementById('jc-num').textContent=cfg.jazzcashNumber;
+  if(cfg.payoneerEmail)document.getElementById('py-em').textContent=cfg.payoneerEmail;
+  if(cfg.easypaisaIconUrl)document.getElementById('ep-ico').innerHTML=`<img src="${cfg.easypaisaIconUrl}" style="width:42px;height:42px;border-radius:10px;object-fit:contain;" alt="EasyPaisa"/>`;
+  if(cfg.jazzcashIconUrl)document.getElementById('jc-ico').innerHTML=`<img src="${cfg.jazzcashIconUrl}" style="width:42px;height:42px;border-radius:10px;object-fit:contain;" alt="JazzCash"/>`;
+  if(cfg.payoneerIconUrl)document.getElementById('py-ico').innerHTML=`<img src="${cfg.payoneerIconUrl}" style="width:42px;height:42px;border-radius:10px;object-fit:contain;" alt="Payoneer"/>`;
+  if(cfg.devName){document.getElementById('ftdn').textContent=cfg.devName;document.getElementById('fdev').textContent='Made By '+cfg.devName.split(' ').pop();}
+  if(cfg.devGithub){document.getElementById('ftgh').href=cfg.devGithub;document.getElementById('ftgh2').href=cfg.devGithub;}
+  if(cfg.copyrightYear){document.getElementById('cpy').textContent=cfg.copyrightYear;document.getElementById('sby').textContent=cfg.copyrightYear;}
+  /* Contact channels */
+  if(cfg.contactChannels&&cfg.contactChannels.length){const wrap=document.getElementById('ftct-wrap');wrap.innerHTML='';cfg.contactChannels.forEach(ch=>{if(!ch.iconUrl||!ch.url)return;const a=document.createElement('a');a.href=ch.url;a.target='_blank';a.rel='noopener noreferrer';a.title=ch.label||'Contact';a.style.cssText='display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;border:1px solid var(--bdr);background:var(--bg2);overflow:hidden;transition:all var(--tr);flex-shrink:0;';a.onmouseenter=()=>{a.style.borderColor='var(--ac)';a.style.background='var(--acl)';};a.onmouseleave=()=>{a.style.borderColor='var(--bdr)';a.style.background='var(--bg2)';};const img=document.createElement('img');img.src=ch.iconUrl;img.alt=ch.label||'';img.style.cssText='width:20px;height:20px;object-fit:contain;border-radius:3px;';a.appendChild(img);wrap.appendChild(a);});}
+}
+document.addEventListener('DOMContentLoaded',async()=>{
+  applyConfig(CFG);
+  if(DB_READY){
+    try{
+      const snap=await db.collection('config').doc('siteSettings').get();
+      if(snap.exists)applyConfig(snap.data());
+    }catch(e){console.warn('[Imgify] Config fetch failed:',e);}
+  }
+});
+</script>
+</body>
+</html>
